@@ -1,0 +1,27 @@
+FROM node:22-slim
+WORKDIR /app
+
+{% if package_manager == "pnpm" %}
+RUN corepack enable && corepack prepare pnpm@latest --activate
+{% elif package_manager == "yarn" %}
+RUN corepack enable
+{% elif package_manager == "bun" %}
+RUN npm install -g bun
+{% endif %}
+
+{% if package_manager == "pnpm" %}
+COPY package.json pnpm-lock.yaml* ./
+{% elif package_manager == "yarn" %}
+COPY package.json yarn.lock* ./
+{% elif package_manager == "bun" %}
+COPY package.json bun.lockb* ./
+{% else %}
+COPY package.json package-lock.json* ./
+{% endif %}
+RUN {{ package_manager }} install
+
+COPY . .
+
+EXPOSE {{ server_port }}
+
+CMD ["{{ package_manager }}", "run", "dev", "--host", "0.0.0.0"]

@@ -1,0 +1,54 @@
+targets:
+  $default:
+    builders:
+      # --- freezed: only files with @freezed annotations ---
+      freezed:
+        generate_for:
+          include:
+            - lib/src/core/errors/*.dart
+            - lib/src/features/*/domain/*.dart
+            - lib/src/shared/layout/layout_state.dart
+          exclude:
+            - lib/src/api/generated/**
+
+      # --- json_serializable: all models (hand-written + generated) ---
+      json_serializable:
+        options:
+          explicit_to_json: true
+          field_rename: snake
+          create_factory: true
+          create_to_json: true
+        generate_for:
+          include:
+            - lib/src/**/*.dart
+
+{%- if include_openapi %}
+
+      # --- retrofit_generator: only generated API client classes ---
+      retrofit_generator:
+        generate_for:
+          include:
+            - lib/src/api/generated/**/*.dart
+{%- endif %}
+
+      # --- riverpod_generator: only files with @riverpod annotations ---
+      riverpod_generator:
+        generate_for:
+          include:
+            - lib/src/api/client/*.dart
+            - lib/src/core/storage/*.dart
+            - lib/src/features/*/data/*.dart
+            - lib/src/features/*/presentation/*_controller.dart
+            - lib/src/shared/providers/*.dart
+            - lib/src/shared/feedback/*.dart
+            - lib/src/shared/layout/layout_state.dart
+            - lib/src/routing/app_router.dart
+            - lib/src/theme/theme_provider.dart
+          exclude:
+            - lib/src/api/generated/**
+
+      # --- go_router_builder ---
+      go_router_builder:
+        generate_for:
+          include:
+            - lib/src/routing/**/*.dart

@@ -1,0 +1,47 @@
+swagger_parser:
+  # --- Schema Source ---
+  # Committed spec for offline builds. Run `scripts/fetch_openapi.sh` to refresh.
+  schema_path: openapi/openapi.json
+  output_directory: lib/src/api/generated
+
+  # --- Client Generation ---
+  # Generate a Dio-based REST client grouped by OpenAPI tags
+  client_type: dio
+  # Name prefix for generated client classes (e.g., HomeClient, ItemsClient)
+  name: Api
+  # Put each tag's client + models in its own subfolder
+  put_in_folder: true
+  # Merge all REST methods into one client class per tag (not one class per endpoint)
+  squish_clients: true
+
+  # --- Model Generation ---
+  # Use json_serializable for all data classes (pure Dart, no freezed dependency in generated code)
+  json_serializable: true
+  freezed: false
+
+  # --- Enum Handling ---
+  # Generate toJson() for enums so they serialize correctly
+  enums_to_json: true
+  # Add an unknown fallback value to enums for forward compatibility
+  unknown_enum_value: true
+
+  # --- Null Safety & Defaults ---
+  # Treat lists that can be null as nullable (rather than defaulting to [])
+  classes_with_nullable_lists: true
+  # Generate default values from the OpenAPI spec
+  default_values: true
+  # Required fields that lack a default become required constructor params
+  required_by_default: false
+
+  # --- Code Style ---
+  # Mark all generated files with @GeneratedCode annotation
+  mark_files_as_generated: true
+  # Include comments from the OpenAPI descriptions
+  include_doc_comments: true
+
+  # --- Name Mappings ---
+  # Fix Dart naming conflicts or enforce custom class/enum names
+  replacement_rules:
+    # Ensure PaginatedItemResponse doesn't collide with generic PaginatedResponse
+    - pattern: PaginatedItemResponse
+      replacement: PaginatedItemsResult

@@ -1,0 +1,4 @@
+recursive-include forge/templates *
+recursive-exclude forge/templates */__pycache__/*
+recursive-exclude forge/templates */.mypy_cache/*
+global-exclude *.pyc *.pyo

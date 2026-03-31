@@ -1,0 +1,17 @@
+{
+  "project_name": "{{ project_name }}",
+  "project_slug": "{{ project_slug }}",
+  "app_title": "{{ app_title }}",
+  "features": "{{ features }}",
+  "version": "{{ version }}",
+  "package_manager": "{{ package_manager }}",
+  "include_auth": {{ include_auth | tojson }},
+  "include_chat": {{ include_chat | tojson }},
+  "include_openapi": {{ include_openapi | tojson }},
+  "api_base_url": "{{ api_base_url }}",
+  "api_proxy_target": "{{ api_proxy_target }}",
+  "server_port": {{ server_port }},
+  "keycloak_url": "{{ keycloak_url | default('http://localhost:8080') }}",
+  "keycloak_realm": "{{ keycloak_realm | default('master') }}",
+  "keycloak_client_id": "{{ keycloak_client_id | default(project_slug) }}"
+}

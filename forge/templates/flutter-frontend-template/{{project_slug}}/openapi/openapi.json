@@ -1,0 +1,548 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "My Service",
+    "description": "A Python microservice template",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "Get Status",
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StatusResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "Get Info",
+        "operationId": "getInfo",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InfoResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Liveness Check",
+        "operationId": "livenessCheck",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LivenessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Readiness Check",
+        "operationId": "readinessCheck",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadinessResponse" }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadinessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items": {
+      "get": {
+        "tags": ["Items"],
+        "summary": "List Items",
+        "operationId": "listItems",
+        "security": [{ "OAuth2": [] }],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 0 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 50, "maximum": 200 }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/ItemStatus" }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "maxLength": 200 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedItemResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Items"],
+        "summary": "Create Item",
+        "operationId": "createItem",
+        "security": [{ "OAuth2": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ItemCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{item_id}": {
+      "get": {
+        "tags": ["Items"],
+        "summary": "Get Item",
+        "operationId": "getItem",
+        "security": [{ "OAuth2": [] }],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Items"],
+        "summary": "Update Item",
+        "operationId": "updateItem",
+        "security": [{ "OAuth2": [] }],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ItemUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Items"],
+        "summary": "Delete Item",
+        "operationId": "deleteItem",
+        "security": [{ "OAuth2": [] }],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks": {
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Enqueue Task",
+        "operationId": "enqueueTask",
+        "security": [{ "OAuth2": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TaskEnqueueRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TaskEnqueueResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "Get Task Status",
+        "operationId": "getTaskStatus",
+        "security": [{ "OAuth2": [] }],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TaskStatusResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Tasks"],
+        "summary": "Cancel Task",
+        "operationId": "cancelTask",
+        "security": [{ "OAuth2": [] }],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "StatusResponse": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string" }
+        }
+      },
+      "InfoResponse": {
+        "type": "object",
+        "required": ["title", "version", "description"],
+        "properties": {
+          "title": { "type": "string" },
+          "version": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "LivenessResponse": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string" },
+          "details": { "type": "string" }
+        }
+      },
+      "ReadinessResponse": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string" },
+          "components": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/components/schemas/HealthComponent" }
+          },
+          "system_info": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      },
+      "HealthComponent": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string" },
+          "latency_ms": { "type": "number", "format": "double" },
+          "details": { "type": "object" }
+        }
+      },
+      "ItemStatus": {
+        "type": "string",
+        "enum": ["DRAFT", "ACTIVE", "ARCHIVED"]
+      },
+      "Item": {
+        "type": "object",
+        "required": ["id", "name", "status", "customer_id", "user_id"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "status": { "$ref": "#/components/schemas/ItemStatus" },
+          "customer_id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ItemCreate": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "status": { "$ref": "#/components/schemas/ItemStatus", "default": "DRAFT" }
+        }
+      },
+      "ItemUpdate": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "status": { "$ref": "#/components/schemas/ItemStatus" }
+        }
+      },
+      "PaginatedItemResponse": {
+        "type": "object",
+        "required": ["items", "total", "skip", "limit", "has_more"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } },
+          "total": { "type": "integer" },
+          "skip": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "has_more": { "type": "boolean" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "message": { "type": "string" },
+          "type": { "type": "string" },
+          "detail": { "$ref": "#/components/schemas/ErrorDetail" }
+        }
+      },
+      "ErrorDetail": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "errors": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "TaskEnqueueRequest": {
+        "type": "object",
+        "required": ["task_type"],
+        "properties": {
+          "task_type": { "type": "string" },
+          "payload": { "type": "object" },
+          "max_retries": { "type": "integer", "minimum": 0, "maximum": 10, "default": 3 }
+        }
+      },
+      "TaskEnqueueResponse": {
+        "type": "object",
+        "required": ["id", "task_type", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "task_type": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": ["PENDING", "RUNNING", "COMPLETED", "FAILED"]
+      },
+      "TaskStatusResponse": {
+        "type": "object",
+        "required": ["id", "task_type", "status", "attempts", "max_retries"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "task_type": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/TaskStatus" },
+          "payload": { "type": "object" },
+          "result": { "type": "object" },
+          "error": { "type": "string" },
+          "attempts": { "type": "integer" },
+          "max_retries": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "started_at": { "type": "string", "format": "date-time" },
+          "completed_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "securitySchemes": {
+      "OAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:8080/realms/master/protocol/openid-connect/auth",
+            "tokenUrl": "http://localhost:8080/realms/master/protocol/openid-connect/token",
+            "scopes": {
+              "openid": "OpenID Connect scope"
+            }
+          }
+        }
+      }
+    }
+  }
+}

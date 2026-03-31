@@ -1,0 +1,66 @@
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import { VueQueryPlugin } from '@tanstack/vue-query'
+
+import App from './App.vue'
+import router from './router'
+import { queryClient } from './providers/query-client'
+{%- if include_auth %}
+import { useAuth } from '@/shared/composables/useAuth'
+{%- endif %}
+import { configureApiClient } from '@/shared/api/client'
+import { useSettingsStore } from '@/shared/stores/settings.store'
+
+import './styles/main.css'
+
+async function bootstrap() {
+  // Start MSW in development when enabled
+  if (import.meta.env.DEV && import.meta.env.VITE_MSW_ENABLED === 'true') {
+    const { worker } = await import('@/shared/mocks/browser')
+    await worker.start({ onUnhandledRequest: 'bypass' })
+  }
+
+  const app = createApp(App)
+  const pinia = createPinia()
+
+  app.use(pinia)
+  app.use(router)
+  app.use(VueQueryPlugin, { queryClient })
+
+{%- if include_auth %}
+  // Initialize auth
+  const auth = useAuth()
+  await auth.init()
+
+  // Wire auth into API client
+  configureApiClient({
+    getToken: auth.getToken,
+    onUnauthorized: () => {
+      auth.logout()
+    },
+  })
+{%- else %}
+  // Configure API client (no auth)
+  configureApiClient({
+    getToken: async () => null,
+    onUnauthorized: () => {},
+  })
+{%- endif %}
+
+  // Apply stored theme
+  const settingsStore = useSettingsStore()
+  settingsStore.applyTheme()
+
+  // Listen for system theme changes
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', () => {
+      if (settingsStore.theme === 'system') {
+        settingsStore.applyTheme()
+      }
+    })
+
+  app.mount('#app')
+}
+
+bootstrap()

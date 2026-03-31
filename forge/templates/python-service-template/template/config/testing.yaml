@@ -1,0 +1,13 @@
+db:
+  url: "sqlite+aiosqlite:///:memory:"
+  echo: false
+
+security:
+  auth:
+    enabled: false
+
+discovery:
+  enabled: false
+
+audit:
+  enabled: false

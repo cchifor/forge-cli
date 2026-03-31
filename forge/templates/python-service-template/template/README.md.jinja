@@ -1,0 +1,850 @@
+# {{ project_title }}
+
+{{ project_description }}
+
+---
+
+## System Design
+
+```mermaid
+graph TB
+    subgraph PresentationLayer["Presentation Layer"]
+        CLI["CLI - Typer"]
+        API["FastAPI Routers - v1"]
+        MW["Middleware Stack"]
+    end
+
+    subgraph MiddlewareDetail["Middleware Execution Order"]
+        direction TB
+        M1["CorrelationIdMiddleware - X-Request-ID"]
+        M2["RateLimitMiddleware - Token-bucket"]
+        M3["AuditMiddleware - Audit logging"]
+        M4["RequestLoggingMiddleware - Access logs"]
+        M1 --> M2 --> M3 --> M4
+    end
+
+    subgraph ApplicationLayer["Application Layer"]
+        LC["AppLifecycle - Bootstrap + Lifespan"]
+        IOC["Dishka DI Container"]
+        SVC["Application Services"]
+        ERR["Error Handlers - Domain to HTTP mapping"]
+    end
+
+    subgraph DomainLayer["Domain Layer"]
+        DOM["Domain Models - Pydantic v2"]
+        EXC["Domain Exceptions"]
+    end
+
+    subgraph InfrastructureLayer["Infrastructure Layer"]
+        CFG["Config System - YAML + env vars"]
+        DB["AsyncDatabase - SQLAlchemy 2.0"]
+        REPO["Repositories - AsyncBaseRepository"]
+        UOW["Unit of Work - Session + repo cache"]
+        AUTH["Authentication - Keycloak / Dev"]
+        DISC["Service Discovery - Eureka"]
+        ORM["ORM Models - SQLAlchemy + Mixins"]
+        MIG["Migrations - Alembic async"]
+        CLIENT["Service Client - httpx + retry + circuit breaker"]
+        TASKS["Background Tasks - DB queue + runner"]
+        OBS["Observability - JSON logs + correlation"]
+    end
+
+    CLI --> LC
+    API --> MW
+    MW --> SVC
+    SVC --> DOM
+    SVC --> EXC
+    SVC --> UOW
+    UOW --> REPO --> ORM --> DB
+    LC --> IOC --> SVC
+    LC --> CFG
+    LC --> AUTH
+    LC --> DISC
+    LC --> TASKS
+    ERR --> EXC
+    API --> ERR
+    SVC --> CLIENT
+    MW --> OBS
+```
+
+## Request Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant COR as CorrelationId
+    participant RL as RateLimit
+    participant AUD as Audit
+    participant LOG as Logging
+    participant R as Router
+    participant DI as Dishka
+    participant S as ItemService
+    participant UoW as UnitOfWork
+    participant REPO as ItemRepo
+    participant DB as Database
+
+    C->>COR: HTTP Request
+    COR->>COR: Extract or generate X-Request-ID
+    COR->>RL: Forward request
+    RL->>RL: Check token bucket
+    RL->>AUD: Forward or reject 429
+    AUD->>LOG: Forward request
+    LOG->>LOG: Start timer
+    LOG->>R: Forward request
+
+    R->>DI: Resolve dependencies
+    DI->>DI: Authenticate via Keycloak or Dev
+    DI->>DI: Create tenant-scoped AuthUnitOfWork
+    DI->>S: Inject ItemService with UoW
+
+    S->>UoW: Enter async context
+    UoW->>UoW: Open session
+    UoW->>REPO: Get ItemRepository
+    REPO->>DB: Execute tenant-scoped SQL
+    DB-->>REPO: Result rows
+    REPO-->>S: Pydantic domain models
+    S->>UoW: Exit context - auto commit
+
+    S-->>R: Response DTO
+    R-->>LOG: HTTP Response
+    LOG->>LOG: Log method, path, status, duration
+    LOG-->>AUD: Forward response
+    AUD->>AUD: Log audit record
+    AUD-->>COR: Forward response
+    COR->>COR: Set X-Request-ID header
+    COR-->>C: HTTP Response
+```
+
+## Directory Structure
+
+```
+python_service/
+├── src/
+│   ├── app/                                    # APPLICATION LAYER
+│   │   ├── __main__.py                         # Entry point: python -m app
+│   │   ├── main.py                             # App factory: create_app()
+│   │   ├── cli/
+│   │   │   ├── __init__.py                     # Typer CLI root (server, db)
+│   │   │   ├── server.py                       # uvicorn launcher with config fallback
+│   │   │   └── db.py                           # Alembic wrapper (upgrade, downgrade, revision)
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       ├── api.py                      # Router aggregation
+│   │   │       └── endpoints/
+│   │   │           ├── admin.py                # POST /admin/log-level (runtime override)
+│   │   │           ├── health.py               # GET /health/live, /health/ready
+│   │   │           ├── home.py                 # GET /, /info
+│   │   │           ├── items.py                # CRUD: GET/POST/PATCH/DELETE /items
+│   │   │           └── tasks.py                # POST/GET/DELETE /tasks (background jobs)
+│   │   ├── core/
+│   │   │   ├── config/
+│   │   │   │   ├── __init__.py                 # SettingsProxy (lazy singleton)
+│   │   │   │   ├── domain.py                   # Pydantic config models
+│   │   │   │   ├── loader.py                   # Settings(BaseSettings) with YAML sources
+│   │   │   │   └── sources.py                  # YamlConfigSettingsSource, ${path} resolver
+│   │   │   ├── errors.py                       # Exception hierarchy + HTTP status mapping
+│   │   │   ├── lifecycle.py                    # Two-phase: bootstrap (DI, auth) + lifespan (startup/shutdown)
+│   │   │   └── ioc/
+│   │   │       ├── __init__.py                 # ALL_PROVIDERS tuple
+│   │   │       ├── infra.py                    # DB, Discovery, session factory
+│   │   │       ├── security.py                 # Auth, AuthUnitOfWork, PublicUnitOfWork
+│   │   │       └── services.py                 # HealthService, ItemService, TaskService
+│   │   ├── middleware/
+│   │   │   ├── audit.py                        # Audit trail logging
+│   │   │   ├── correlation.py                  # X-Request-ID propagation via ContextVar
+│   │   │   ├── logging.py                      # Structured access logs (stream-aware)
+│   │   │   └── rate_limit.py                   # Token-bucket per tenant/IP
+│   │   ├── domain/                             # DOMAIN LAYER
+│   │   │   ├── base.py                         # BaseDomainModel, PaginatedResponse[T]
+│   │   │   ├── health.py                       # HealthStatus, LivenessResponse, ReadinessResponse
+│   │   │   └── item.py                         # Item DTOs: Create/Update/Read/Summary + ItemStatus enum
+│   │   ├── data/
+│   │   │   ├── models/
+│   │   │   │   ├── __init__.py                 # Model registry for Alembic auto-detect
+│   │   │   │   ├── base.py                     # DeclarativeBase + JSON_TYPE (JSONB on Postgres)
+│   │   │   │   ├── audit.py                    # AuditLog ORM model
+│   │   │   │   └── item.py                     # ItemModel ORM with tenant/user/timestamp mixins
+│   │   │   └── repositories/
+│   │   │       └── item_repository.py          # Search, filter by status/tags, count, name_exists
+│   │   └── services/
+│   │       ├── health_service.py               # Liveness (no-op) + Readiness (DB ping with latency)
+│   │       └── item_service.py                 # CRUD + name uniqueness + pagination assembly
+│   │
+│   └── service/                                # INFRASTRUCTURE LAYER (shared library)
+│       ├── api/
+│       │   ├── filtering.py                    # filter_dependency() — auto-generates Query params from Pydantic
+│       │   └── pagination.py                   # PaginationParams, CursorPaginationParams, SortParams
+│       ├── client/
+│       │   ├── auth.py                         # OAuth2 ClientCredentialsAuth with token caching
+│       │   ├── base.py                         # ServiceClient — httpx + retry + circuit breaker + auth
+│       │   ├── circuit_breaker.py              # CLOSED/OPEN/HALF_OPEN state machine
+│       │   ├── errors.py                       # ServiceCallError, CircuitOpenError
+│       │   └── retry.py                        # RetryPolicy — exponential backoff with jitter
+│       ├── core/
+│       │   ├── context.py                      # ContextVar for customer_id/user_id
+│       │   └── errors.py                       # ApplicationError, ServiceError base hierarchy
+│       ├── db/
+│       │   ├── aio.py                          # AsyncDatabase (engine + pool + session factory)
+│       │   └── config.py                       # build_engine_args (SQLite vs Postgres branching)
+│       ├── domain/
+│       │   ├── account.py                      # Account + UserRole (ADMIN/USER/READ_ONLY)
+│       │   ├── auth_schema.py                  # TokenPayload for JWT decode
+│       │   ├── config.py                       # AuthConfig (Keycloak settings)
+│       │   └── user.py                         # User model
+│       ├── observability/
+│       │   ├── correlation.py                  # ContextVar-based correlation ID
+│       │   └── json_logging.py                 # JsonFormatter for structured log output
+│       ├── repository/
+│       │   ├── aio.py                          # AsyncBaseRepository[M, S, C, U] — generic CRUD
+│       │   ├── base.py                         # RepositoryLogicMixin — scoping, filtering, sorting, ORM-to-dict
+│       │   ├── errors.py                       # EntityNotFoundException, RepositoryException
+│       │   └── mixins.py                       # TenantMixin, UserOwnedMixin, TimestampMixin, SoftDeleteMixin
+│       ├── security/
+│       │   ├── auth.py                         # oauth2_scheme, authenticate_request, DevAuthProvider bypass
+│       │   ├── base.py                         # AuthProvider ABC
+│       │   └── providers/
+│       │       ├── dev.py                      # DevAuthProvider — returns fake user (no Keycloak needed)
+│       │       └── keycloak.py                 # KeycloakProvider — JWT validation via python-keycloak
+│       ├── tasks/
+│       │   ├── models.py                       # BackgroundTask ORM — status, payload, result, retry tracking
+│       │   ├── registry.py                     # @task_handler decorator + handler lookup
+│       │   ├── runner.py                       # BackgroundTaskRunner — poll loop, claim, execute, retry
+│       │   └── service.py                      # TaskService — enqueue, get, cancel
+│       ├── uow/
+│       │   └── aio.py                          # AsyncUnitOfWork + HealthRepository
+│       ├── utils/
+│       │   └── fastapiutils.py                 # Error schema, filter_dict, query_list
+│       └── discovery.py                        # Eureka client (register/unregister async)
+│
+├── config/
+│   ├── default.yaml                            # All defaults (SQLite, auth disabled, full logging dict)
+│   ├── development.yaml                        # Dev overrides (echo=true)
+│   ├── production.yaml                         # Prod overrides (PostgreSQL, auth enabled, pool_size=20)
+│   └── testing.yaml                            # Test overrides (in-memory SQLite, audit disabled)
+├── alembic/
+│   ├── env.py                                  # Async Alembic env
+│   ├── script.py.mako                          # Migration template
+│   └── versions/
+│       └── 0001_initial.py                     # Creates items + audit_logs tables
+├── tests/
+│   ├── conftest.py                             # Root fixtures: mock_config_dir
+│   ├── unit/
+│   │   ├── conftest.py                         # FakeUser, fake_account, async_uow_mock
+│   │   ├── test_circuit_breaker.py             # State transitions, thresholds, timeout, half-open
+│   │   ├── test_config.py                      # DbConfig validators, AuditConfig defaults
+│   │   ├── test_correlation.py                 # Generate, set/get correlation IDs
+│   │   ├── test_errors.py                      # Exception hierarchy + MRO-based HTTP mapping
+│   │   ├── test_item_service.py                # CRUD with mocked UoW: list, create, update, delete
+│   │   ├── test_pagination.py                  # PaginationParams, SortParams, has_more logic
+│   │   ├── test_retry.py                       # Success, retry, exhaust, non-retryable, zero retries
+│   │   └── test_task_registry.py               # Register, lookup, overwrite, list types
+│   └── integration/
+│       ├── conftest.py                         # In-memory SQLite, TestClient, DI override, FakeUser
+│       └── test_items_api.py                   # Full CRUD flow: create, list, get, update, delete, 404
+├── pyproject.toml                              # Project config: deps, ruff, mypy, pytest
+├── Dockerfile                                  # Multi-stage: python:3.13-slim builder + runtime
+├── docker-compose.yaml                         # app + postgres:16-alpine + pgadmin
+├── alembic.ini                                 # Alembic config
+├── pytest.ini                                  # pytest: asyncio_mode=auto
+├── .env.example                                # Example environment variables
+└── .gitignore                                  # Python + IDE + env + db files
+```
+
+## Architecture
+
+The template follows **Clean Architecture** with strict unidirectional dependency flow:
+
+```
+Presentation  -->  Application  -->  Domain  <--  Infrastructure
+```
+
+### Presentation Layer (`app/api/`, `app/middleware/`, `app/cli/`)
+
+HTTP endpoints, middleware stack, and CLI commands. No business logic. Depends on Application and Domain layers only.
+
+- **FastAPI Routers** with versioned prefix (`/api/v1/`)
+- **DishkaRoute** for authenticated endpoints (auto-DI via `FromDishka[T]`)
+- **Middleware** processes every request: correlation ID, rate limiting, audit, access logging
+
+### Application Layer (`app/services/`, `app/core/`)
+
+Orchestrates use cases by composing domain models and infrastructure. Contains:
+
+- **Services** (`ItemService`, `HealthService`) — business rules, validation, UoW management
+- **Lifecycle** — two-phase boot: build-time (DI, auth, logging) and runtime (discovery, task runner)
+- **DI Providers** — Dishka providers scoped to `APP` (singletons) or `REQUEST` (per-request)
+- **Error Handlers** — maps domain exceptions to HTTP responses via MRO-based lookup
+
+### Domain Layer (`app/domain/`)
+
+Pure Pydantic models with zero infrastructure dependencies:
+
+- **BaseDomainModel** — `from_attributes=True`, `frozen=True`, `use_enum_values=True`
+- **DTOs** per entity: `Create`, `Update`, `Read`, `Summary`
+- **PaginatedResponse[T]** — generic envelope with `items`, `total`, `skip`, `limit`, `has_more`
+
+### Infrastructure Layer (`service/`)
+
+All external concerns: database, auth, HTTP clients, service discovery, task queue.
+
+Shared across services as an inline library (ready for future extraction to a pip package).
+
+## Core Components
+
+### Configuration System
+
+Layered YAML configuration with environment variable overrides:
+
+```
+Priority (highest wins):
+  1. Environment variables     (APP__DB__URL=...)
+  2. .secrets.yaml             (git-ignored, API keys)
+  3. config/{ENV}.yaml         (development, production, testing)
+  4. config/default.yaml       (all defaults)
+```
+
+**Cross-references** — config values can reference other paths:
+```yaml
+# production.yaml
+db:
+  url: "${DATABASE_URL}"       # Resolved from env var or other config path
+```
+
+**Lazy loading** — `Settings` is only instantiated when first accessed via `SettingsProxy`, not at import time.
+
+### Application Lifecycle
+
+**Phase 1: Bootstrap** (synchronous, before server starts)
+1. Configure logging from YAML dict config
+2. Create Dishka DI container with all providers
+3. Initialize authentication (Keycloak or DevAuthProvider based on `auth.enabled`)
+
+**Phase 2: Lifespan** (async, server startup/shutdown)
+1. Register with Eureka service discovery (if enabled)
+2. Start `BackgroundTaskRunner` polling loop
+3. On shutdown: stop task runner (drain in-flight), close DI container
+
+### Dependency Injection (Dishka)
+
+Three provider classes with two scopes:
+
+| Provider | Scope | Provides |
+|----------|-------|----------|
+| `InfraProvider` | APP | `AsyncDatabase`, `async_sessionmaker`, `Discovery` |
+| `InfraProvider` | REQUEST | `AsyncSession` |
+| `SecurityProvider` | REQUEST | `User`, `AuthUnitOfWork`, `PublicUnitOfWork` |
+| `ServiceProvider` | APP | `HealthService`, `TaskService` |
+| `ServiceProvider` | REQUEST | `ItemService` |
+
+**Injection patterns:**
+```python
+# Public endpoint (no auth required) — use @inject
+@router.get("/health/live")
+@inject
+async def liveness(service: FromDishka[HealthService]): ...
+
+# Authenticated endpoint — use DishkaRoute + oauth2_scheme
+router = APIRouter(route_class=DishkaRoute, dependencies=[Depends(oauth2_scheme)])
+
+@router.get("")
+async def list_items(service: FromDishka[ItemService]): ...
+```
+
+### Exception Hierarchy
+
+```
+ApplicationError
+├── RepositoryError
+│   ├── NotFoundError ─────────────────── 404
+│   ├── DuplicateEntryError ───────────── 409
+│   ├── ForeignKeyViolationError
+│   ├── NotNullViolationError
+│   ├── ConstraintViolationError
+│   ├── DataValidationError ───────────── 422
+│   └── DatabaseTimeoutError ──────────── 503
+├── ServiceError
+│   ├── ValidationError ───────────────── 422
+│   ├── PermissionDeniedError ─────────── 403
+│   ├── AlreadyExistsError ────────────── 409
+│   └── ReadOnlyError ────────────────── 403
+└── AuthorizationError ────────────────── 403
+```
+
+Mapping uses **MRO traversal** — subclass exceptions inherit their parent's HTTP status:
+
+```python
+_DOMAIN_ERROR_MAP: dict[type[ApplicationError], int] = {
+    NotFoundError: 404,
+    AlreadyExistsError: 409,
+    ...
+}
+
+# Lookup walks the exception's MRO until a match is found
+for cls in type(exc).__mro__:
+    if cls in _DOMAIN_ERROR_MAP:
+        return _DOMAIN_ERROR_MAP[cls]
+```
+
+### Middleware Stack
+
+Execution order (outermost first):
+
+| # | Middleware | Purpose |
+|---|-----------|---------|
+| 1 | `CorrelationIdMiddleware` | Extracts or generates `X-Request-ID`, sets ContextVar, echoes in response |
+| 2 | `RateLimitMiddleware` | Token-bucket (120 req/min default), per-tenant or per-IP, skips `/health` |
+| 3 | `AuditMiddleware` | Logs method/path/status/duration/user for audit trail |
+| 4 | `RequestLoggingMiddleware` | Structured access log with correlation_id, customer_id, duration_ms |
+| 5 | `CORSMiddleware` | Optional, config-driven (`server.cors.enabled`) |
+
+### Repository Pattern
+
+```
+AsyncBaseRepository[ModelType, PydanticSchema, CreateSchema, UpdateSchema]
+    ├── get(id) -> Schema | None
+    ├── get_or_fail(id) -> Schema          # raises EntityNotFoundException
+    ├── get_by(**kwargs) -> Schema | None
+    ├── get_all(skip, limit, filters, sort_by) -> list[Schema]
+    ├── count(filters) -> int
+    ├── exists(id) -> bool
+    ├── create(obj_in) -> Schema
+    ├── update(id, obj_in) -> Schema
+    └── delete(id) -> None                 # soft-delete if SoftDeleteMixin
+```
+
+**Automatic scoping** via `RepositoryLogicMixin`:
+- `TenantMixin` — filters by `customer_id` from `Account`
+- `UserOwnedMixin` — filters by `user_id` (admins see all)
+- `SoftDeleteMixin` — adds `WHERE is_active = TRUE`
+
+### Unit of Work
+
+```python
+async with uow:
+    repo = uow.repo(ItemRepository)       # Custom repository (cached)
+    item = await repo.create(data)
+    # Auto-commits on success, rolls back on exception
+```
+
+Overloaded `repo()` factory:
+- `uow.repo(CustomRepo)` — custom repository (e.g., `ItemRepository`)
+- `uow.repo(Model, Schema)` — generic repository for any model/schema pair
+
+## Features
+
+### Structured JSON Logging + Correlation IDs
+
+Every request gets a unique `X-Request-ID` (extracted from header or auto-generated). The ID is:
+- Stored in a `ContextVar` — accessible from any async code
+- Included in every log record (via `JsonFormatter`)
+- Propagated to downstream service calls (via `ServiceClient`)
+- Echoed back in the response header
+
+**JSON log output** (production):
+```json
+{
+  "timestamp": "2026-03-27T12:00:00+00:00",
+  "level": "INFO",
+  "logger": "api.access",
+  "message": "127.0.0.1:52341 => GET /api/v1/items => 200 [12.3ms]",
+  "correlation_id": "a1b2c3d4e5f6g7h8",
+  "customer_id": "00000000-0000-0000-0000-000000000001",
+  "method": "GET",
+  "path": "/api/v1/items",
+  "status": 200,
+  "duration_ms": 12.3
+}
+```
+
+**Runtime log level override** — change log verbosity without restarting:
+```bash
+curl -X POST http://localhost:5000/api/v1/admin/log-level \
+  -H "Content-Type: application/json" \
+  -d '{"logger": "app", "level": "DEBUG"}'
+```
+
+### Resilient Service Client
+
+Base class for service-to-service HTTP communication with built-in resilience:
+
+```python
+class KnowledgeClient(ServiceClient):
+    def __init__(self):
+        super().__init__(
+            base_url="http://knowledge:5002",
+            service_name="knowledge",
+            auth=ClientCredentialsAuth.from_keycloak(
+                server_url="http://keycloak:8080",
+                realm="master",
+                client_id="my-service",
+                client_secret="secret",
+            ),
+        )
+
+    async def search(self, query: str) -> list[dict]:
+        return await self.get("/api/v1/search", params={"q": query})
+```
+
+**Retry Policy** — exponential backoff with jitter, configurable retryable predicate:
+```python
+RetryPolicy(max_retries=3, base_delay=0.5, max_delay=30.0, jitter=True)
+```
+
+**Circuit Breaker** — prevents cascading failures:
+```
+CLOSED ──(5 failures)──> OPEN ──(30s timeout)──> HALF_OPEN ──(success)──> CLOSED
+                                                      │
+                                                  (failure)
+                                                      │
+                                                      v
+                                                    OPEN
+```
+
+**OAuth2 Token Caching** — auto-refreshes client-credentials tokens with configurable margin.
+
+### Pagination & Filtering Framework
+
+Reusable FastAPI dependencies that eliminate boilerplate:
+
+```python
+from service.api.pagination import PaginationParams, SortParams
+from service.api.filtering import filter_dependency
+
+class ItemFilter(BaseModel):
+    status: ItemStatus | None = None
+    search: str | None = None
+
+@router.get("/items")
+async def list_items(
+    page: PaginationParams = Depends(),
+    sort: SortParams = Depends(),
+    filters: ItemFilter = Depends(filter_dependency(ItemFilter)),
+):
+    ...
+    return page.response(items=items, total=total)
+```
+
+- **PaginationParams** — `?skip=0&limit=50` with validation
+- **CursorPaginationParams** — `?cursor=abc&limit=50` for large datasets
+- **SortParams** — `?sort=-created_at,name` (comma-separated, `-` prefix for descending)
+- **filter_dependency()** — auto-generates `Query()` params from any Pydantic model
+
+### Background Task Infrastructure
+
+Database-backed task queue with retry and graceful shutdown:
+
+```python
+# 1. Register a handler
+@task_handler("send_welcome_email")
+async def handle_welcome_email(payload: dict) -> dict | None:
+    await send_email(payload["to"], payload["template"])
+    return {"sent": True}
+
+# 2. Enqueue a task (from any service)
+task_id = await task_service.enqueue(
+    "send_welcome_email",
+    payload={"to": "user@example.com", "template": "welcome"},
+    max_retries=3,
+)
+
+# 3. Check status via API
+# GET /api/v1/tasks/{task_id}
+```
+
+**Task lifecycle:**
+```
+PENDING ──(claimed by runner)──> RUNNING ──(handler success)──> COMPLETED
+    │                               │
+    │                          (handler fails)
+    │                               │
+    │                    (attempts < max_retries)──> PENDING (backoff)
+    │                               │
+    │                    (attempts >= max_retries)──> FAILED
+    │
+    └──(cancel API)──> CANCELLED
+```
+
+**Runner features:**
+- Polls with `SELECT ... FOR UPDATE SKIP LOCKED` (safe for multi-pod)
+- Semaphore-bounded concurrency (`max_concurrent=5`)
+- Exponential backoff retry (30s, 60s, 120s, ... up to 10min)
+- Graceful shutdown drains in-flight tasks before exit
+
+## Example Domain: Item
+
+The template includes a complete `Item` entity demonstrating all patterns:
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Domain | `app/domain/item.py` | `ItemStatus` enum, `ItemCreate`, `ItemUpdate`, `Item`, `ItemSummary` DTOs |
+| ORM | `app/data/models/item.py` | `ItemModel` with UUID PK, name, description, tags (JSON), status (enum), tenant/user/timestamp mixins |
+| Repository | `app/data/repositories/item_repository.py` | `ItemRepository` — search by name/description, filter by status, `name_exists()` |
+| Service | `app/services/item_service.py` | `ItemService` — CRUD via UoW, name uniqueness validation, `PaginatedItemResponse` |
+| Endpoint | `app/api/v1/endpoints/items.py` | Full REST: `GET /items` (paginated), `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}` |
+
+## API Reference
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/` | No | Service running status |
+| `GET` | `/api/v1/info` | No | App title, version, description |
+| `GET` | `/api/v1/health/live` | No | Kubernetes liveness probe |
+| `GET` | `/api/v1/health/ready` | No | Kubernetes readiness probe (DB ping) |
+| `GET` | `/api/v1/items` | Yes | List items (paginated, filtered, sorted) |
+| `POST` | `/api/v1/items` | Yes | Create a new item |
+| `GET` | `/api/v1/items/{id}` | Yes | Get item by ID |
+| `PATCH` | `/api/v1/items/{id}` | Yes | Partial update |
+| `DELETE` | `/api/v1/items/{id}` | Yes | Delete item |
+| `POST` | `/api/v1/tasks` | Yes | Enqueue a background task |
+| `GET` | `/api/v1/tasks/{id}` | Yes | Get task status |
+| `DELETE` | `/api/v1/tasks/{id}` | Yes | Cancel a pending task |
+| `POST` | `/api/v1/admin/log-level` | No | Override log level at runtime |
+
+## Configuration
+
+### Environment Selection
+
+Set `ENV` to control which YAML overlay is loaded:
+
+```bash
+ENV=development    # config/default.yaml + config/development.yaml
+ENV=production     # config/default.yaml + config/production.yaml
+ENV=testing        # config/default.yaml + config/testing.yaml
+```
+
+### Environment Variable Overrides
+
+All config fields can be overridden via env vars with `APP__` prefix and `__` nesting:
+
+```bash
+APP__DB__URL=postgresql+asyncpg://user:pass@host/db
+APP__DB__POOL_SIZE=20
+APP__SECURITY__AUTH__ENABLED=true
+APP__SERVER__PORT=8080
+```
+
+### Key Configuration Sections
+
+| Section | Fields | Purpose |
+|---------|--------|---------|
+| `app` | title, version, description, contact | FastAPI metadata |
+| `server` | host, port, cors, workers, log_level | Uvicorn settings |
+| `db` | url, pool_size, max_overflow, pool_timeout, echo, ssl_mode | SQLAlchemy engine |
+| `security` | secret_key, auth (server_url, realm, client_id, enabled) | JWT + Keycloak |
+| `discovery` | enabled, app_name, service_url, instance_* | Eureka registration |
+| `logging` | version, formatters, handlers, loggers, root | Python dictConfig |
+| `audit` | enabled, excluded_paths, excluded_methods | Audit middleware |
+
+### Development Mode
+
+When `security.auth.enabled=false`, the `DevAuthProvider` is used:
+- No Keycloak instance required
+- All requests auto-authenticate as a default dev user
+- OAuth2 bearer token header is optional
+
+## Testing
+
+### Strategy
+
+| Layer | Approach | Database | Auth |
+|-------|----------|----------|------|
+| **Unit** | Mock UoW + repositories | None | None |
+| **Integration** | Real FastAPI + DI | In-memory SQLite | FakeUser injected |
+
+### Running Tests
+
+```bash
+# All tests
+uv run pytest -v
+
+# Unit tests only
+uv run pytest tests/unit/ -v
+
+# Integration tests only
+uv run pytest tests/integration/ -v
+
+# With coverage
+uv run pytest --cov=src --cov-report=html
+```
+
+### Test Fixtures
+
+**Unit** (`tests/unit/conftest.py`):
+- `fake_user` — `FakeUser(id, customer_id, email, roles)`
+- `fake_account` — `Account` with known UUIDs
+- `async_uow_mock` — `AsyncMock` supporting `async with`
+
+**Integration** (`tests/integration/conftest.py`):
+- `async_engine` — `sqlite+aiosqlite:///:memory:` with auto `create_all`
+- `session_factory` — test `async_sessionmaker`
+- `test_app` — FastAPI app with overridden Dishka container
+- `client` — `httpx.AsyncClient` pointing at the test app
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.13+
+- [uv](https://docs.astral.sh/uv/) package manager
+
+### Install & Run
+
+```bash
+cd python_service
+
+# Install dependencies
+uv sync
+
+# Run tests (validates everything works)
+uv run pytest -v
+
+# Start the server (development mode)
+ENV=development uv run python -m app server run
+```
+
+### Test the API
+
+```bash
+# Health check
+curl http://localhost:5000/api/v1/health/live
+
+# Create an item
+curl -X POST http://localhost:5000/api/v1/items \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My First Item", "description": "Hello world", "tags": ["demo"]}'
+
+# List items
+curl http://localhost:5000/api/v1/items
+
+# Swagger UI
+open http://localhost:5000/docs
+```
+
+### Docker
+
+```bash
+# Start app + PostgreSQL
+docker compose up --build
+
+# Start with pgAdmin (port 5050)
+docker compose --profile tools up --build
+```
+
+## Customization Guide
+
+### Adding a New Entity
+
+1. **Domain model** — create `src/app/domain/widget.py`:
+   ```python
+   class WidgetCreate(BaseModel):
+       name: str
+       ...
+
+   class Widget(BaseDomainModel):
+       id: UUID
+       name: str
+       ...
+   ```
+
+2. **ORM model** — create `src/app/data/models/widget.py`:
+   ```python
+   class WidgetModel(Base, TenantMixin, UserOwnedMixin, TimestampMixin):
+       __tablename__ = "widgets"
+       id = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+       name = mapped_column(String(255), nullable=False)
+       ...
+   ```
+
+3. **Register model** — add import in `src/app/data/models/__init__.py`
+
+4. **Repository** — create `src/app/data/repositories/widget_repository.py`:
+   ```python
+   class WidgetRepository(AsyncBaseRepository[WidgetModel, Widget, WidgetCreate, WidgetUpdate]):
+       def __init__(self, session, account=None):
+           super().__init__(session=session, model=WidgetModel, schema=Widget, account=account)
+   ```
+
+5. **Service** — create `src/app/services/widget_service.py`
+
+6. **DI** — register in `src/app/core/ioc/services.py`:
+   ```python
+   @provide(scope=Scope.REQUEST)
+   def get_widget_service(self, auth_uow: AuthUnitOfWork) -> WidgetService:
+       return WidgetService(uow=auth_uow)
+   ```
+
+7. **Endpoint** — create `src/app/api/v1/endpoints/widgets.py`
+
+8. **Router** — register in `src/app/api/v1/api.py`
+
+9. **Migration** — `uv run python -m app db revision -m "add widgets table"`
+
+### Adding a Background Task Handler
+
+```python
+# src/app/tasks/my_handlers.py
+from service.tasks.registry import task_handler
+
+@task_handler("generate_report")
+async def handle_generate_report(payload: dict) -> dict | None:
+    report_id = payload["report_id"]
+    # ... generate report ...
+    return {"url": f"/reports/{report_id}.pdf"}
+```
+
+Import the module in `src/app/core/lifecycle.py` (startup) to trigger registration.
+
+### Adding a Service Client
+
+```python
+# src/app/clients/notification_client.py
+from service.client.base import ServiceClient
+
+class NotificationClient(ServiceClient):
+    def __init__(self):
+        super().__init__(base_url="http://notifications:5003", service_name="notifications")
+
+    async def send(self, user_id: str, message: str) -> dict:
+        return await self.post("/api/v1/send", json={"user_id": user_id, "message": message})
+```
+
+### Switching to JSON Logging (Production)
+
+In `config/production.yaml`:
+```yaml
+logging:
+  formatters:
+    json:
+      "()": service.observability.json_logging.JsonFormatter
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: json
+      stream: ext://sys.stdout
+  root:
+    level: INFO
+    handlers: [console]
+```
+
+## Tech Stack
+
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Language | Python | >= 3.13 |
+| Web Framework | FastAPI | >= 0.115 |
+| ASGI Server | Uvicorn | >= 0.34 |
+| ORM | SQLAlchemy | >= 2.0 |
+| Migrations | Alembic | >= 1.18 |
+| Dependency Injection | Dishka | >= 1.8 |
+| Validation | Pydantic | >= 2.11 |
+| Configuration | pydantic-settings + PyYAML | |
+| HTTP Client | httpx | >= 0.28 |
+| Auth | python-keycloak + PyJWT | |
+| Service Discovery | py-eureka-client | |
+| CLI | Typer | >= 0.15 |
+| Testing | pytest + pytest-asyncio | |
+| Linting | Ruff | >= 0.3 |
+| Type Checking | mypy | >= 1.10 |
+| Containerization | Docker (multi-stage) | python:3.13-slim |
+| Database (dev) | SQLite (aiosqlite) | |
+| Database (prod) | PostgreSQL (asyncpg) | >= 16 |

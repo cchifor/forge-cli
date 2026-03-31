@@ -1,0 +1,19 @@
+server:
+  port: 5000
+  max_workers: 4
+
+db:
+  url: "${DATABASE_URL}"
+  pool_size: 20
+  max_overflow: 40
+  pool_recycle: 1800
+  echo: false
+  application_name: "my-service"
+  ssl_mode: "require"
+
+security:
+  auth:
+    enabled: true
+
+discovery:
+  enabled: true

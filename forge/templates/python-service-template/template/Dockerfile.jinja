@@ -1,0 +1,40 @@
+# --- Builder Stage ---
+FROM python:{{ python_version }}-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc libffi-dev libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /project
+
+# Cache dependency layer
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-editable
+
+# Copy source
+COPY src/ src/
+COPY config/ config/
+COPY alembic/ alembic/
+COPY alembic.ini .
+
+# --- Runtime Stage ---
+FROM python:{{ python_version }}-slim
+
+WORKDIR /project
+
+# Copy installed venv and source
+COPY --from=builder /project/.venv /project/.venv
+COPY --from=builder /project/src /project/src
+COPY --from=builder /project/config /project/config
+COPY --from=builder /project/alembic /project/alembic
+COPY --from=builder /project/alembic.ini /project/alembic.ini
+
+ENV PATH="/project/.venv/bin:$PATH"
+ENV PYTHONPATH=/project/src
+ENV ENV=production
+
+EXPOSE {{ server_port }}
+
+CMD ["python", "-m", "app", "server", "run"]

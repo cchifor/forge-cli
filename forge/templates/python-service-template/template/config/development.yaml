@@ -1,0 +1,10 @@
+db:
+  url: "sqlite+aiosqlite:///development.db"
+  echo: false
+
+security:
+  auth:
+    enabled: false
+
+discovery:
+  enabled: false

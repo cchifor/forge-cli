@@ -1,0 +1,119 @@
+services:
+  # ── Backend ──
+  backend:
+    build:
+      context: ./{{ backend_slug }}
+      dockerfile: Dockerfile
+    ports:
+      - "{{ backend_port }}:{{ backend_port }}"
+    environment:
+      ENV: development
+      APP__DB__URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/{{ db_name }}"
+{% if include_keycloak %}
+      APP__SECURITY__AUTH__ENABLED: "true"
+      APP__SECURITY__AUTH__SERVER_URL: "http://keycloak:8080"
+      APP__SECURITY__AUTH__REALM: "{{ keycloak_realm }}"
+      APP__SECURITY__AUTH__CLIENT_ID: "{{ keycloak_client_id }}"
+{% else %}
+      APP__SECURITY__AUTH__ENABLED: "false"
+{% endif %}
+    depends_on:
+      postgres:
+        condition: service_healthy
+{% if include_keycloak %}
+      keycloak:
+        condition: service_healthy
+{% endif %}
+    networks:
+      - app-network
+
+  # ── Database ──
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: {{ db_name }}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+{% if has_frontend %}
+  # ── Frontend ──
+  frontend:
+    build:
+      context: ./{{ frontend_slug }}
+      dockerfile: Dockerfile
+    ports:
+      - "{{ frontend_port }}:{{ frontend_port }}"
+    environment:
+      VITE_API_BASE_URL: "http://localhost:{{ frontend_port }}"
+{% if include_keycloak %}
+      VITE_AUTH_DISABLED: "false"
+      VITE_KEYCLOAK_URL: "http://localhost:{{ keycloak_port }}"
+      VITE_KEYCLOAK_REALM: "{{ keycloak_realm }}"
+      VITE_KEYCLOAK_CLIENT_ID: "{{ keycloak_client_id }}"
+{% else %}
+      VITE_AUTH_DISABLED: "true"
+{% endif %}
+    depends_on:
+      - backend
+    networks:
+      - app-network
+{% endif %}
+
+{% if include_keycloak %}
+  # ── Identity Provider ──
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev
+    ports:
+      - "{{ keycloak_port }}:8080"
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "cat < /dev/null > /dev/tcp/localhost/9000"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - app-network
+{% endif %}
+
+  # ── Tools (optional) ──
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    profiles:
+      - tools
+    networks:
+      - app-network
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge

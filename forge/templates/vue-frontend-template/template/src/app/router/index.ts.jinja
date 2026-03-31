@@ -1,0 +1,43 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { setupRouterGuards } from './guards'
+{%- if include_auth %}
+import { authRoutes } from '@/features/auth'
+{%- endif %}
+import { homeRoutes } from '@/features/home'
+// --- feature imports ---
+// --- end feature imports ---
+import { profileRoutes } from '@/features/profile'
+import { settingsRoutes } from '@/features/settings'
+
+const routes = [
+{%- if include_auth %}
+  ...authRoutes,
+{%- endif %}
+  {
+    path: '/',
+    component: () => import('@/shared/layouts/MainLayout.vue'),
+    meta: { requiresAuth: {% if include_auth %}true{% else %}false{% endif %} },
+    children: [
+      ...homeRoutes,
+      // --- feature routes ---
+      // --- end feature routes ---
+      ...profileRoutes,
+      ...settingsRoutes,
+    ],
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/app/NotFoundPage.vue'),
+    meta: { requiresAuth: false },
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+setupRouterGuards(router)
+
+export default router

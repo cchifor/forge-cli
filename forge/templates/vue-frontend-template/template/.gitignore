@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Generated files
+src/shared/api/generated/
+src/auto-imports.d.ts
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env (local overrides only; .env.development is committed)
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test
+coverage/

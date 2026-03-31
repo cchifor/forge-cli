@@ -1,0 +1,10 @@
+node_modules/
+build/
+.svelte-kit/
+dist/
+.env
+.env.*
+!.env.development
+*.local
+.DS_Store
+Thumbs.db

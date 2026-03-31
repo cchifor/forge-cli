@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forge-cli"
+version = "0.1.0"
+description = "CLI tool to generate and orchestrate full-stack projects."
+requires-python = ">=3.11"
+dependencies = [
+    "copier>=9.0.0",
+    "questionary>=2.0.0",
+    "jinja2>=3.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+forge = "forge.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["forge*"]
+
+[tool.setuptools.package-data]
+"forge.templates" = ["**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

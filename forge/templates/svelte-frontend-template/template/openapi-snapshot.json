@@ -1,0 +1,60 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "My Service",
+    "description": "A Python microservice template",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/info": {
+      "get": {
+        "summary": "Info",
+        "operationId": "info",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InfoResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "InfoResponse": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "version": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "required": ["title", "version", "description"]
+      }
+    }
+  }
+}

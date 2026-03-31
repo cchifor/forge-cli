@@ -1,0 +1,57 @@
+import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
+import AutoImport from 'unplugin-auto-import/vite'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    tailwindcss(),
+    AutoImport({
+      imports: [
+        'vue',
+        'vue-router',
+        'pinia',
+        {
+          '@tanstack/vue-query': [
+            'useQuery',
+            'useMutation',
+            'useQueryClient',
+            'useInfiniteQuery',
+          ],
+        },
+      ],
+      dts: 'src/auto-imports.d.ts',
+      dirs: [
+        'src/shared/composables',
+        'src/shared/stores',
+        'src/features/*/composables',
+        'src/features/*/api',
+      ],
+      vueTemplate: true,
+    }),
+  ],
+  define: {
+    __DEV_VALIDATION__: JSON.stringify(process.env.NODE_ENV !== 'production'),
+  },
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  server: {
+    port: {{ server_port }},
+    proxy: {
+      '/api': {
+        target: '{{ api_proxy_target }}',
+        changeOrigin: true,
+      },
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+  },
+})
