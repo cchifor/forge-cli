@@ -14,8 +14,14 @@ case "$raw_os" in
   *)                     os="unknown" ;;
 esac
 
+# Detect WSL (reports Linux but is actually Windows)
+if [[ "$os" == "linux" ]] && grep -qi microsoft /proc/version 2>/dev/null; then
+  os="windows"
+fi
+
 ask() {
-  read -rp "$1 [Y/n] " a
+  # Read from /dev/tty so prompts work even when piped (curl | bash)
+  read -rp "$1 [Y/n] " a </dev/tty
   [[ "${a:-Y}" =~ ^[Yy]$ ]]
 }
 
