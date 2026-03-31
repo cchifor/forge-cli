@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="https://github.com/your-org/forge-cli.git"
+REPO="https://github.com/cchifor/forge-cli.git"
 TOOL="git+${REPO}"
 
 # -- Helpers ------------------------------------------------------------------

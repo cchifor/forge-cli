@@ -16,7 +16,7 @@ Generate production-ready backends, frontends, or full-stack applications -- wir
 ### Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/your-org/forge-cli/main/install | bash
+curl -fsSL https://raw.githubusercontent.com/cchifor/forge-cli/main/install | bash
 ```
 
 The installer checks for `uv`, `git`, and `docker`, asks before installing anything missing, then installs forge globally. On Windows, run from **Git Bash** ([Git for Windows](https://git-scm.com/downloads/win)) -- it automatically delegates to PowerShell for native operations.
@@ -28,13 +28,13 @@ The installer checks for `uv`, `git`, and `docker`, asks before installing anyth
 
 ```bash
 # Global
-uv tool install git+https://github.com/your-org/forge-cli.git
+uv tool install git+https://github.com/cchifor/forge-cli.git
 
 # One-shot (CI/CD, AI agents)
-uvx --from git+https://github.com/your-org/forge-cli.git forge
+uvx --from git+https://github.com/cchifor/forge-cli.git forge
 
 # Development
-git clone https://github.com/your-org/forge-cli.git
+git clone https://github.com/cchifor/forge-cli.git
 cd forge-cli && python sync_templates.py && uv sync
 uv run forge
 ```
@@ -241,7 +241,7 @@ forge-cli/
 ### Setup
 
 ```bash
-git clone https://github.com/your-org/forge-cli.git
+git clone https://github.com/cchifor/forge-cli.git
 cd forge-cli
 python sync_templates.py        # copy templates from parent repo
 uv sync                         # install dependencies
