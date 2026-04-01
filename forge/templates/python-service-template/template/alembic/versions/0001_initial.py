@@ -1,4 +1,4 @@
-"""Initial migration: items and audit_logs tables.
+"""Initial migration: items, audit_logs, and background_tasks tables.
 
 Revision ID: 0001
 Revises:
@@ -55,7 +55,28 @@ def upgrade() -> None:
     op.create_index("ix_audit_customer_created", "audit_logs", ["customer_id", "created_at"])
     op.create_index("ix_audit_logs_customer_id", "audit_logs", ["customer_id"])
 
+    op.create_table(
+        "background_tasks",
+        sa.Column("id", sa.Uuid(), nullable=False, default=sa.text("gen_random_uuid()")),
+        sa.Column("task_type", sa.String(100), nullable=False),
+        sa.Column("status", sa.String(20), nullable=False, server_default="PENDING"),
+        sa.Column("payload", sa.JSON(), nullable=True),
+        sa.Column("result", sa.JSON(), nullable=True),
+        sa.Column("error", sa.Text(), nullable=True),
+        sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("max_retries", sa.Integer(), nullable=False, server_default="3"),
+        sa.Column("scheduled_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("ix_bg_tasks_task_type", "background_tasks", ["task_type"])
+    op.create_index("ix_bg_tasks_status", "background_tasks", ["status"])
+    op.create_index("ix_bg_tasks_status_scheduled", "background_tasks", ["status", "scheduled_at"])
+
 
 def downgrade() -> None:
+    op.drop_table("background_tasks")
     op.drop_table("audit_logs")
     op.drop_table("items")
