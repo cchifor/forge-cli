@@ -33,8 +33,8 @@ def generate(config: ProjectConfig) -> Path:
     if config.backend:
         print("  Generating backend ...")
         backend_dir = _generate_backend(config, project_root)
-        print("  Installing backend dependencies ...")
-        _run_uv_sync(backend_dir)
+        print("  Setting up backend ...")
+        _setup_backend(backend_dir)
 
     # 2. Generate frontend
     if config.frontend and config.frontend.framework != FrontendFramework.NONE:
@@ -47,7 +47,11 @@ def generate(config: ProjectConfig) -> Path:
         render_compose(config, project_root)
         # Copy Keycloak DB init script if auth is enabled
         if config.include_keycloak:
-            shutil.copy2(str(TEMPLATES_DIR / "init-db.sh"), str(project_root / "init-db.sh"))
+            # Write with explicit LF line endings -- CRLF breaks the
+            # shebang inside the Linux container.
+            src = (TEMPLATES_DIR / "init-db.sh").read_text(encoding="utf-8")
+            dst = project_root / "init-db.sh"
+            dst.write_bytes(src.replace("\r\n", "\n").encode("utf-8"))
 
     # 4. Render frontend Dockerfile and nginx.conf (all frameworks)
     if config.frontend and config.frontend.framework != FrontendFramework.NONE:
@@ -116,22 +120,33 @@ def _generate_frontend(config: ProjectConfig, project_root: Path) -> Path:
     return project_root / config.frontend_slug
 
 
-def _run_uv_sync(backend_dir: Path) -> None:
-    """Run uv sync in the backend directory to install dependencies and update the lock file."""
+def _run_backend_cmd(backend_dir: Path, cmd: list[str], description: str) -> bool:
+    """Run a command in the backend directory, printing status."""
     result = subprocess.run(
-        ["uv", "sync"],
+        cmd,
         cwd=str(backend_dir),
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
-    if result.returncode != 0:
-        print("  [!!] uv sync failed. You can run it manually:")
-        print(f"       cd {backend_dir} && uv sync")
+    if result.returncode == 0:
+        print(f"  [ok] {description}")
+        return True
+    else:
+        print(f"  [!!] {description} failed")
         if result.stderr:
             for line in result.stderr.strip().splitlines()[-5:]:
                 print(f"       {line}")
+        return False
+
+
+def _setup_backend(backend_dir: Path) -> None:
+    """Install deps, run linting, and run tests for the generated backend."""
+    _run_backend_cmd(backend_dir, ["uv", "sync"], "Install dependencies")
+    _run_backend_cmd(backend_dir, ["uv", "run", "ruff", "check", "src/", "tests/"], "Lint check")
+    _run_backend_cmd(backend_dir, ["uv", "run", "ruff", "format", "--check", "src/", "tests/"], "Format check")
+    _run_backend_cmd(backend_dir, ["uv", "run", "pytest", "-v"], "Tests")
 
 
 def _force_remove_readonly(func, path, _exc_info):

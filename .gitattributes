@@ -1,0 +1,4 @@
+# Force LF for files that run inside Linux containers
+*.sh text eol=lf
+forge/templates/init-db.sh text eol=lf
+install text eol=lf
