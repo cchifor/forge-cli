@@ -39,30 +39,6 @@ get_version() {
   "$@" 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+[.0-9]*' | head -1
 }
 
-spin() {
-  local pid=$1
-  local msg=$2
-  local frames=('/' '-' '\' '|')
-  local i=0
-  # Hide cursor
-  printf "\033[?25l"
-  while kill -0 "$pid" 2>/dev/null; do
-    printf "\r  ${MUTED}[%s]${NC} %s" "${frames[i]}" "$msg"
-    i=$(( (i + 1) % ${#frames[@]} ))
-    sleep 0.15
-  done
-  wait "$pid" 2>/dev/null
-  local ret=$?
-  # Show cursor
-  printf "\033[?25h"
-  if [ $ret -eq 0 ]; then
-    printf "\r  ${GREEN}[ok]${NC} %-40s\n" "$msg"
-  else
-    printf "\r  ${RED}[!!]${NC} %-40s\n" "$msg failed"
-  fi
-  return $ret
-}
-
 # -- Banner -------------------------------------------------------------------
 
 echo -e ""
@@ -78,15 +54,12 @@ echo -e ""
 if installed uv; then
   echo -e "  ${GREEN}[ok]${NC} uv $(get_version uv --version)"
 else
+  echo -e "  ${MUTED}Installing uv...${NC}"
   if [[ "$os" == "windows" ]]; then
-    ps_exec "irm https://astral.sh/uv/install.ps1 | iex" > /dev/null 2>&1 &
+    ps_exec "irm https://astral.sh/uv/install.ps1 | iex" 2>&1 | sed 's/^/    /'
   else
-    curl -LsSf https://astral.sh/uv/install.sh | sh > /dev/null 2>&1 &
+    curl -LsSf https://astral.sh/uv/install.sh | sh 2>&1 | sed 's/^/    /'
   fi
-  spin $! "Installing uv..." || {
-    echo -e "  ${RED}[!!] Cannot continue without uv. Aborting.${NC}"
-    exit 1
-  }
   # Refresh PATH
   if [[ "$os" == "windows" ]]; then
     eval "$(powershell.exe -NoProfile -Command '
@@ -97,8 +70,10 @@ else
   else
     source "$HOME/.local/bin/env" 2>/dev/null || export PATH="$HOME/.local/bin:$PATH"
   fi
-  if ! installed uv; then
-    echo -e "  ${RED}[!!] uv not found on PATH after install. Aborting.${NC}"
+  if installed uv; then
+    echo -e "  ${GREEN}[ok]${NC} uv $(get_version uv --version)"
+  else
+    echo -e "  ${RED}[!!] uv installation failed. Aborting.${NC}"
     exit 1
   fi
 fi
@@ -137,15 +112,24 @@ echo -e ""
 
 # -- Install forge-cli --------------------------------------------------------
 
+echo -e "  ${MUTED}Installing forge-cli...${NC}"
+echo -e ""
+
 if [[ "$os" == "windows" ]]; then
-  ps_exec "uv tool install $TOOL" > /dev/null 2>&1 &
+  ps_exec "uv tool install $TOOL" 2>&1 | sed 's/^/    /'
+  install_status=${PIPESTATUS[0]:-$?}
 else
-  uv tool install "$TOOL" > /dev/null 2>&1 &
+  uv tool install "$TOOL" 2>&1 | sed 's/^/    /'
+  install_status=${PIPESTATUS[0]:-$?}
 fi
-spin $! "Installing forge-cli..." || {
-  echo -e "  ${RED}[!!] Installation failed. Aborting.${NC}"
+
+echo -e ""
+if [ "$install_status" -eq 0 ]; then
+  echo -e "  ${GREEN}[ok]${NC} forge-cli installed"
+else
+  echo -e "  ${RED}[!!]${NC} Installation failed"
   exit 1
-}
+fi
 
 # -- Done ---------------------------------------------------------------------
 
