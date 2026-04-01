@@ -21,9 +21,7 @@ class RepositoryException(RepositoryError):
 
 
 class DuplicateEntryError(RepositoryError):
-    def __init__(
-        self, entity_name: str, conflicting_field: str, conflicting_value: Any
-    ):
+    def __init__(self, entity_name: str, conflicting_field: str, conflicting_value: Any):
         message = (
             f"Failed to create {entity_name}. "
             f"An entry with the value '{conflicting_value}' already exists "

@@ -10,18 +10,19 @@ import os
 from collections.abc import AsyncGenerator
 
 import pytest
-from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
+from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.api import api_router
-from app.core.config.loader import Settings
 from app.core.errors import (
     ApplicationError,
     domain_exception_handler,
@@ -36,8 +37,6 @@ from app.services.item_service import ItemService
 from service.domain.account import Account
 from service.domain.user import User
 from service.uow.aio import AsyncUnitOfWork
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.exceptions import RequestValidationError
 
 os.environ["ENV"] = "testing"
 
@@ -112,9 +111,7 @@ class TestProvider(Provider):
 
     @provide(scope=Scope.REQUEST)
     def get_auth_uow(self) -> AuthUnitOfWork:
-        uow = AsyncUnitOfWork(
-            session_factory=self._session_factory, account=self._account
-        )
+        uow = AsyncUnitOfWork(session_factory=self._session_factory, account=self._account)
         return AuthUnitOfWork(uow)
 
     @provide(scope=Scope.REQUEST)

@@ -17,9 +17,7 @@ class TenantMixin:
 
     @declared_attr
     def customer_id(cls) -> Mapped[uuid.UUID]:
-        return mapped_column(
-            Uuid, nullable=False, index=True, default=GLOBAL_CUSTOMER_ID
-        )
+        return mapped_column(Uuid, nullable=False, index=True, default=GLOBAL_CUSTOMER_ID)
 
 
 class UserOwnedMixin:

@@ -186,7 +186,10 @@ class BackgroundTaskRunner:
             await session.commit()
         logger.warning(
             "Task %s will retry in %ds (attempt %d/%d)",
-            task.id, backoff, task.attempts, task.max_retries,
+            task.id,
+            backoff,
+            task.attempts,
+            task.max_retries,
         )
 
     def _task_done(self, task: asyncio.Task) -> None:

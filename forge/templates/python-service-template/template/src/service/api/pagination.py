@@ -100,7 +100,9 @@ class SortParams:
         self,
         sort: str | None = Query(
             None,
-            description="Comma-separated sort fields. Prefix - for descending. E.g. -created_at,name",
+            description=(
+                "Comma-separated sort fields. Prefix - for descending. E.g. -created_at,name"
+            ),
         ),
     ):
         self.fields: list[str] = []

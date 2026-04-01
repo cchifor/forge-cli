@@ -1,7 +1,5 @@
 """Tests for the exception hierarchy and HTTP status mapping."""
 
-import pytest
-
 from app.core.errors import (
     AlreadyExistsError,
     ApplicationError,

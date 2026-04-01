@@ -23,9 +23,7 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
 _STATE_KEY = "auth_provider"
 
 
-def initialize_auth(
-    app: FastAPI, provider: AuthProvider, auth_url: str, token_url: str
-) -> None:
+def initialize_auth(app: FastAPI, provider: AuthProvider, auth_url: str, token_url: str) -> None:
     setattr(app.state, _STATE_KEY, provider)
 
     if hasattr(oauth2_scheme, "model"):
@@ -40,9 +38,7 @@ def initialize_auth(
 def get_auth_provider_from_state(request: Request) -> AuthProvider:
     provider = getattr(request.app.state, _STATE_KEY, None)
     if not provider:
-        raise RuntimeError(
-            "Auth module not initialized. Call initialize_auth() in lifespan."
-        )
+        raise RuntimeError("Auth module not initialized. Call initialize_auth() in lifespan.")
     return provider
 
 

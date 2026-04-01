@@ -1,8 +1,6 @@
 from contextvars import ContextVar, Token
 
-customer_id_context: ContextVar[str | None] = ContextVar(
-    "customer_id_context", default=None
-)
+customer_id_context: ContextVar[str | None] = ContextVar("customer_id_context", default=None)
 user_id_context: ContextVar[str | None] = ContextVar("user_id_context", default=None)
 
 

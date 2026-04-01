@@ -21,9 +21,7 @@ AsyncSessionFactory = Callable[[], AsyncSession]
 class AsyncUnitOfWork:
     """Asynchronous Unit of Work. Manages session lifecycle and repository caching."""
 
-    def __init__(
-        self, session_factory: AsyncSessionFactory, account: Account | None = None
-    ):
+    def __init__(self, session_factory: AsyncSessionFactory, account: Account | None = None):
         self._session_factory = session_factory
         self._account = account
         self._session: AsyncSession | None = None
@@ -88,9 +86,7 @@ class AsyncUnitOfWork:
             if key in self._repositories:
                 return cast(TRepo, self._repositories[key])
             if issubclass(repo_cls, AsyncBaseRepository):
-                self._repositories[key] = repo_cls(
-                    session=self.session, account=self._account
-                )  # type: ignore
+                self._repositories[key] = repo_cls(session=self.session, account=self._account)  # type: ignore
             else:
                 self._repositories[key] = repo_cls(session=self.session)  # type: ignore
             return cast(TRepo, self._repositories[key])

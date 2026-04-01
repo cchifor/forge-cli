@@ -33,9 +33,7 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
-            "timestamp": dt.datetime.fromtimestamp(
-                record.created, tz=dt.timezone.utc
-            ).isoformat(),
+            "timestamp": dt.datetime.fromtimestamp(record.created, tz=dt.timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -50,8 +48,17 @@ class JsonFormatter(logging.Formatter):
             payload["correlation_id"] = correlation_id
 
         # Merge structured extra fields (passed via logger.info("msg", extra={...}))
-        for key in ("customer_id", "user_id", "source", "method", "path",
-                     "status", "duration_ms", "error", "query"):
+        for key in (
+            "customer_id",
+            "user_id",
+            "source",
+            "method",
+            "path",
+            "status",
+            "duration_ms",
+            "error",
+            "query",
+        ):
             value = getattr(record, key, None)
             if value is not None:
                 payload[key] = value

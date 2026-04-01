@@ -38,9 +38,7 @@ class Settings(BaseSettings):
     )
 
     @staticmethod
-    def _bootstrap_log(
-        message: str, level: str = "INFO", stack_offset: int = 1
-    ) -> None:
+    def _bootstrap_log(message: str, level: str = "INFO", stack_offset: int = 1) -> None:
         now = datetime.datetime.now()
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         pid = os.getpid()
@@ -77,16 +75,12 @@ class Settings(BaseSettings):
 
         cls._bootstrap_log(f"Loading Configuration (ENV={env})")
 
-        def _log_source_status(
-            name: str, path: str, exists: bool, priority: int
-        ) -> None:
+        def _log_source_status(name: str, path: str, exists: bool, priority: int) -> None:
             status = "Found" if exists else "Missing (Skipping)"
             msg = f"Priority {priority}: {name:<15} -> {path} [{status}]"
             cls._bootstrap_log(msg, stack_offset=2)
 
-        _log_source_status(
-            "Env Vars", f"Prefix: {cls.model_config.get('env_prefix')}", True, 1
-        )
+        _log_source_status("Env Vars", f"Prefix: {cls.model_config.get('env_prefix')}", True, 1)
         _log_source_status("Secrets", str(secrets_yaml), secrets_yaml.exists(), 2)
         _log_source_status("Environment", str(env_yaml), env_yaml.exists(), 3)
         _log_source_status("Defaults", str(default_yaml), default_yaml.exists(), 4)

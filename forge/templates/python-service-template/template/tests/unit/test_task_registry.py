@@ -2,7 +2,12 @@
 
 import pytest
 
-from service.tasks.registry import _HANDLERS, get_handler, registered_types, task_handler
+from service.tasks.registry import (
+    _HANDLERS,
+    get_handler,
+    registered_types,
+    task_handler,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -29,10 +34,12 @@ class TestTaskRegistry:
 
     def test_registered_types(self):
         @task_handler("type_a")
-        async def a(p): pass
+        async def a(p):
+            pass
 
         @task_handler("type_b")
-        async def b(p): pass
+        async def b(p):
+            pass
 
         types = registered_types()
         assert "type_a" in types
@@ -40,9 +47,11 @@ class TestTaskRegistry:
 
     def test_overwrite_warning(self):
         @task_handler("dup")
-        async def first(p): pass
+        async def first(p):
+            pass
 
         @task_handler("dup")
-        async def second(p): pass
+        async def second(p):
+            pass
 
         assert get_handler("dup") is second

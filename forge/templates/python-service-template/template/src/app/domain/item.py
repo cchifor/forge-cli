@@ -2,7 +2,7 @@ import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from app.domain.base import BaseDomainModel, PaginatedResponse
 

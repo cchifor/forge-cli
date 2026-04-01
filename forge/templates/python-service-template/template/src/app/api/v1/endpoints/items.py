@@ -41,16 +41,12 @@ async def list_items(
     service: FromDishka[ItemService],
     skip: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(50, ge=1, le=200, description="Page size"),
-    item_status: ItemStatus | None = Query(
-        None, alias="status", description="Filter by status"
-    ),
+    item_status: ItemStatus | None = Query(None, alias="status", description="Filter by status"),
     search: str | None = Query(
         None, max_length=200, description="Case-insensitive name/description search"
     ),
 ) -> PaginatedItemResponse:
-    return await service.list(
-        skip=skip, limit=limit, status=item_status, search=search
-    )
+    return await service.list(skip=skip, limit=limit, status=item_status, search=search)
 
 
 @router.post(
@@ -67,9 +63,7 @@ async def create_item(
     try:
         return await service.create(data)
     except AlreadyExistsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.get(
@@ -86,9 +80,7 @@ async def get_item(
     try:
         return await service.get(item_id)
     except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.patch(
@@ -106,13 +98,9 @@ async def update_item(
     try:
         return await service.update(item_id, data)
     except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except AlreadyExistsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.delete(
@@ -128,6 +116,4 @@ async def delete_item(
     try:
         await service.delete(item_id)
     except NotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

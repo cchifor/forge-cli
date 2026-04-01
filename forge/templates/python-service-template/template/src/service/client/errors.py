@@ -45,6 +45,5 @@ class CircuitOpenError(ServiceCallError):
 
     def __str__(self) -> str:
         return (
-            f"Circuit breaker open for {self.service}. "
-            f"Retry after {self.retry_after_seconds:.0f}s."
+            f"Circuit breaker open for {self.service}. Retry after {self.retry_after_seconds:.0f}s."
         )

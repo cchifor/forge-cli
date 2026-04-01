@@ -32,14 +32,10 @@ class RepositoryLogicMixin[ModelType: DeclarativeBase]:
     def _get_primary_key_name(self) -> str:
         primary_keys = self.mapper.primary_key
         if not primary_keys:
-            raise RepositoryException(
-                f"Model {self.model.__name__} has no primary key."
-            )
+            raise RepositoryException(f"Model {self.model.__name__} has no primary key.")
         pks_list = list(primary_keys)
         if len(pks_list) > 1:
-            raise NotImplementedError(
-                f"Composite PKs not supported for {self.model.__name__}."
-            )
+            raise NotImplementedError(f"Composite PKs not supported for {self.model.__name__}.")
         return pks_list[0].name
 
     def _apply_scopes(self, query: Select) -> Select:
@@ -111,17 +107,13 @@ class RepositoryLogicMixin[ModelType: DeclarativeBase]:
     def _orm_to_dict(db_obj: DeclarativeBase) -> dict[str, Any]:
         state: InstanceState = inspect(db_obj)  # type: ignore[assignment]
         mapper: Mapper = state.mapper
-        data: dict[str, Any] = {
-            c.key: getattr(db_obj, c.key) for c in mapper.column_attrs
-        }
+        data: dict[str, Any] = {c.key: getattr(db_obj, c.key) for c in mapper.column_attrs}
         for rel in mapper.relationships:
             if rel.key not in state.dict:
                 continue
             value = state.dict[rel.key]
             if isinstance(value, list):
-                data[rel.key] = [
-                    RepositoryLogicMixin._orm_to_dict(item) for item in value
-                ]
+                data[rel.key] = [RepositoryLogicMixin._orm_to_dict(item) for item in value]
             elif value is not None:
                 data[rel.key] = RepositoryLogicMixin._orm_to_dict(value)
             else:

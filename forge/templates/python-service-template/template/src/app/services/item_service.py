@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 from uuid import UUID
 
 from app.core.errors import AlreadyExistsError, NotFoundError
@@ -30,9 +29,7 @@ class ItemService:
     ) -> PaginatedItemResponse:
         async with self._uow as uow:
             repo = uow.repo(ItemRepository)
-            items = await repo.list_items(
-                skip=skip, limit=limit, status=status, search=search
-            )
+            items = await repo.list_items(skip=skip, limit=limit, status=status, search=search)
             total = await repo.count_items(status=status, search=search)
 
         return PaginatedItemResponse(

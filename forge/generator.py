@@ -144,8 +144,8 @@ def _run_backend_cmd(backend_dir: Path, cmd: list[str], description: str) -> boo
 def _setup_backend(backend_dir: Path) -> None:
     """Install deps, run linting, and run tests for the generated backend."""
     _run_backend_cmd(backend_dir, ["uv", "sync"], "Install dependencies")
-    _run_backend_cmd(backend_dir, ["uv", "run", "ruff", "check", "src/", "tests/"], "Lint check")
-    _run_backend_cmd(backend_dir, ["uv", "run", "ruff", "format", "--check", "src/", "tests/"], "Format check")
+    _run_backend_cmd(backend_dir, ["uv", "run", "ruff", "check", "--fix", "src/", "tests/"], "Lint fix")
+    _run_backend_cmd(backend_dir, ["uv", "run", "ruff", "format", "src/", "tests/"], "Format")
     _run_backend_cmd(backend_dir, ["uv", "run", "pytest", "-v"], "Tests")
 
 

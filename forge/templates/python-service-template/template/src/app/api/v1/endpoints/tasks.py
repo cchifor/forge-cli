@@ -68,9 +68,7 @@ async def enqueue_task(
     task_id = await service.enqueue(
         data.task_type, payload=data.payload, max_retries=data.max_retries
     )
-    return TaskEnqueueResponse(
-        id=str(task_id), task_type=data.task_type, status="PENDING"
-    )
+    return TaskEnqueueResponse(id=str(task_id), task_type=data.task_type, status="PENDING")
 
 
 @router.get(

@@ -37,9 +37,7 @@ class NotFoundError(RepositoryError):
 
 
 class DuplicateEntryError(RepositoryError):
-    def __init__(
-        self, entity_name: str, conflicting_field: str, conflicting_value: Any
-    ):
+    def __init__(self, entity_name: str, conflicting_field: str, conflicting_value: Any):
         message = (
             f"Failed to create {entity_name}. "
             f"An entry with the value '{conflicting_value}' already exists "
@@ -69,9 +67,7 @@ class DataValidationError(RepositoryError):
 
 
 class DatabaseTimeoutError(RepositoryError):
-    def __init__(
-        self, message="The database operation timed out. Please try again later."
-    ):
+    def __init__(self, message="The database operation timed out. Please try again later."):
         super().__init__(message)
 
 
@@ -152,9 +148,7 @@ def _log_error(request: Request, exc: Exception, status_code: int):
         "method": request.method,
         "path": request.url.path,
         "query": dict(request.query_params),
-        "client": f"{request.client.host}:{request.client.port}"
-        if request.client
-        else "unknown",
+        "client": f"{request.client.host}:{request.client.port}" if request.client else "unknown",
         "status_code": status_code,
         "error_type": exc.__class__.__name__,
         "message": str(exc),
@@ -184,8 +178,7 @@ def http_exception_handler(request: Request, exc: Exception):
 def validation_exception_handler(request: Request, exc: Exception):
     _log_error(request, exc, 422)
     errors = {
-        f"{err['msg']}: {err['type']} {err['loc']}"
-        for err in getattr(exc, "errors", lambda: [])()
+        f"{err['msg']}: {err['type']} {err['loc']}" for err in getattr(exc, "errors", lambda: [])()
     }
     message = f"Validation Error: {', '.join(errors)}"
     return JSONResponse(

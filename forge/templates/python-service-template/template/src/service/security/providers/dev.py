@@ -5,7 +5,6 @@ without a Keycloak (or any other IdP) instance.
 """
 
 import logging
-import uuid
 
 from fastapi.security import OAuth2AuthorizationCodeBearer
 

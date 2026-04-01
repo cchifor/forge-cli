@@ -62,9 +62,7 @@ class ReferenceResolvingSettingsSource(PydanticBaseSettingsSource):
         super().__init__(settings_cls)
         self.sources = sources
 
-    def get_field_value(
-        self, field: FieldInfo, field_name: str
-    ) -> tuple[Any, str, bool]:
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
         return None, field_name, False
 
     def __call__(self) -> dict[str, Any]:
@@ -79,14 +77,8 @@ class ReferenceResolvingSettingsSource(PydanticBaseSettingsSource):
     def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
         result = base.copy()
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
-                result[key] = ReferenceResolvingSettingsSource._deep_merge(
-                    result[key], value
-                )
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = ReferenceResolvingSettingsSource._deep_merge(result[key], value)
             else:
                 result[key] = value
         return result
@@ -101,9 +93,7 @@ class YamlConfigSettingsSource(PydanticBaseSettingsSource):
         super().__init__(settings_cls)
         self.file_path = file_path
 
-    def get_field_value(
-        self, field: FieldInfo, field_name: str
-    ) -> tuple[Any, str, bool]:
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
         return None, field_name, False
 
     def __call__(self) -> dict[str, Any]:
@@ -117,9 +107,7 @@ class YamlConfigSettingsSource(PydanticBaseSettingsSource):
             return {}
 
 
-def find_project_root(
-    anchor_file: str = "default.yaml", search_folder: str = "config"
-) -> Path:
+def find_project_root(anchor_file: str = "default.yaml", search_folder: str = "config") -> Path:
     current_path = Path(__file__).resolve().parent
     root = Path(current_path.root)
     while current_path != root:

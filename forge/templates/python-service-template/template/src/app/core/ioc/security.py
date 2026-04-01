@@ -27,9 +27,7 @@ class SecurityProvider(Provider):
     async def get_current_user(self, request: Request) -> User:
         user = await authenticate_request(request)
         if not user:
-            raise HTTPException(
-                status_code=401, detail="Authentication required for this resource"
-            )
+            raise HTTPException(status_code=401, detail="Authentication required for this resource")
         context.set_context(customer_id=user.customer_id, user_id=user.id)
         return user
 
@@ -42,8 +40,6 @@ class SecurityProvider(Provider):
         return AuthUnitOfWork(uow)
 
     @provide(scope=Scope.REQUEST)
-    def get_public_uow(
-        self, session_factory: async_sessionmaker[AsyncSession]
-    ) -> PublicUnitOfWork:
+    def get_public_uow(self, session_factory: async_sessionmaker[AsyncSession]) -> PublicUnitOfWork:
         uow = AsyncUnitOfWork(session_factory=session_factory, account=None)
         return PublicUnitOfWork(uow)

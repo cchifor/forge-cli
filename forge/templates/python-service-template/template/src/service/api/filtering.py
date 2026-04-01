@@ -19,7 +19,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Any, TypeVar, get_type_hints
+from typing import Any, TypeVar
 
 from fastapi import Query
 from pydantic import BaseModel

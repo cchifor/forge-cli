@@ -21,9 +21,7 @@ class ServiceProvider(Provider):
         return HealthService()
 
     @provide
-    def get_task_service(
-        self, session_factory: async_sessionmaker[AsyncSession]
-    ) -> TaskService:
+    def get_task_service(self, session_factory: async_sessionmaker[AsyncSession]) -> TaskService:
         return TaskService(session_factory=session_factory)
 
     @provide(scope=Scope.REQUEST)

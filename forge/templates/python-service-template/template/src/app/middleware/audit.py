@@ -20,17 +20,17 @@ class AuditMiddleware(BaseHTTPMiddleware):
     ):
         super().__init__(app)
         self.excluded_paths = excluded_paths or {
-            "/health", "/metrics", "/docs", "/openapi.json"
+            "/health",
+            "/metrics",
+            "/docs",
+            "/openapi.json",
         }
         self.excluded_methods = excluded_methods or {"OPTIONS", "HEAD"}
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        if (
-            request.method in self.excluded_methods
-            or request.url.path in self.excluded_paths
-        ):
+        if request.method in self.excluded_methods or request.url.path in self.excluded_paths:
             return await call_next(request)
 
         start = time.perf_counter()

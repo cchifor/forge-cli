@@ -2,8 +2,6 @@
 
 import time
 
-import pytest
-
 from service.client.circuit_breaker import CircuitBreaker
 
 

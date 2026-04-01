@@ -26,9 +26,7 @@ class BackgroundTask(Base):
 
     __tablename__ = "background_tasks"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     task_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     status: Mapped[str] = mapped_column(
         String(20), default=TaskStatus.PENDING, nullable=False, index=True
@@ -51,6 +49,4 @@ class BackgroundTask(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    __table_args__ = (
-        Index("ix_bg_tasks_status_scheduled", "status", "scheduled_at"),
-    )
+    __table_args__ = (Index("ix_bg_tasks_status_scheduled", "status", "scheduled_at"),)

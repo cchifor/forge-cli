@@ -33,9 +33,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._rate = requests_per_minute / 60.0
         self._capacity = float(burst or requests_per_minute)
-        self._buckets: dict[str, _Bucket] = defaultdict(
-            lambda: _Bucket(tokens=self._capacity)
-        )
+        self._buckets: dict[str, _Bucket] = defaultdict(lambda: _Bucket(tokens=self._capacity))
         self._skip_paths = set(skip_paths or [])
 
     async def dispatch(

@@ -63,11 +63,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         error: Exception | None = None,
     ) -> None:
         duration = (time.perf_counter() - start_time) * 1000
-        source = (
-            f"{request.client.host}:{request.client.port}"
-            if request.client
-            else "unknown"
-        )
+        source = f"{request.client.host}:{request.client.port}" if request.client else "unknown"
         # Enrich with correlation and tenant context
         correlation_id = getattr(request.state, "correlation_id", None)
         user = getattr(request.state, "user", None)

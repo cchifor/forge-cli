@@ -124,9 +124,7 @@ class ServiceClient:
                 token = await self._auth.get_token(self.client)
                 headers["Authorization"] = f"Bearer {token}"
 
-            response = await self.client.request(
-                method, path, headers=headers, **kwargs
-            )
+            response = await self.client.request(method, path, headers=headers, **kwargs)
             response.raise_for_status()
             self._cb.record_success()
 

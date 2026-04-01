@@ -1,6 +1,5 @@
 """Integration tests for the Items API endpoints."""
 
-import pytest
 from httpx import AsyncClient
 
 
@@ -64,9 +63,7 @@ class TestListItems:
 
 class TestGetItem:
     async def test_get_item(self, client: AsyncClient):
-        create_resp = await client.post(
-            "/api/v1/items", json={"name": "Get Me"}
-        )
+        create_resp = await client.post("/api/v1/items", json={"name": "Get Me"})
         item_id = create_resp.json()["id"]
 
         response = await client.get(f"/api/v1/items/{item_id}")
@@ -74,17 +71,13 @@ class TestGetItem:
         assert response.json()["name"] == "Get Me"
 
     async def test_get_item_not_found(self, client: AsyncClient):
-        response = await client.get(
-            "/api/v1/items/00000000-0000-0000-0000-000000000099"
-        )
+        response = await client.get("/api/v1/items/00000000-0000-0000-0000-000000000099")
         assert response.status_code == 404
 
 
 class TestUpdateItem:
     async def test_update_item(self, client: AsyncClient):
-        create_resp = await client.post(
-            "/api/v1/items", json={"name": "Old Name"}
-        )
+        create_resp = await client.post("/api/v1/items", json={"name": "Old Name"})
         item_id = create_resp.json()["id"]
 
         response = await client.patch(
@@ -106,9 +99,7 @@ class TestUpdateItem:
 
 class TestDeleteItem:
     async def test_delete_item(self, client: AsyncClient):
-        create_resp = await client.post(
-            "/api/v1/items", json={"name": "Delete Me"}
-        )
+        create_resp = await client.post("/api/v1/items", json={"name": "Delete Me"})
         item_id = create_resp.json()["id"]
 
         delete_resp = await client.delete(f"/api/v1/items/{item_id}")
@@ -118,9 +109,7 @@ class TestDeleteItem:
         assert get_resp.status_code == 404
 
     async def test_delete_not_found(self, client: AsyncClient):
-        response = await client.delete(
-            "/api/v1/items/00000000-0000-0000-0000-000000000099"
-        )
+        response = await client.delete("/api/v1/items/00000000-0000-0000-0000-000000000099")
         assert response.status_code == 404
 
 
