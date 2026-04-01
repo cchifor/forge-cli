@@ -117,18 +117,8 @@ echo -e ""
 
 if [[ "$os" == "windows" ]]; then
   ps_exec "uv tool install $TOOL" 2>&1 | sed 's/^/    /'
-  install_status=${PIPESTATUS[0]:-$?}
 else
   uv tool install "$TOOL" 2>&1 | sed 's/^/    /'
-  install_status=${PIPESTATUS[0]:-$?}
-fi
-
-echo -e ""
-if [ "$install_status" -eq 0 ]; then
-  echo -e "  ${GREEN}[ok]${NC} forge-cli installed"
-else
-  echo -e "  ${RED}[!!]${NC} Installation failed"
-  exit 1
 fi
 
 # -- Done ---------------------------------------------------------------------
@@ -136,7 +126,7 @@ fi
 echo -e ""
 echo -e "  ${GREEN}Done!${NC} forge-cli is ready."
 echo -e ""
-echo -e "  To get started, open a new terminal and run:"
+echo -e "  To get started, run:"
 echo -e ""
 echo -e "    ${GREEN}forge${NC}"
 echo -e ""
