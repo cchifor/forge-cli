@@ -45,6 +45,9 @@ def generate(config: ProjectConfig) -> Path:
     if config.backend:
         print("  Rendering docker-compose.yml ...")
         render_compose(config, project_root)
+        # Copy Keycloak DB init script if auth is enabled
+        if config.include_keycloak:
+            shutil.copy2(str(TEMPLATES_DIR / "init-db.sh"), str(project_root / "init-db.sh"))
 
     # 4. Render frontend Dockerfile and nginx.conf (all frameworks)
     if config.frontend and config.frontend.framework != FrontendFramework.NONE:
