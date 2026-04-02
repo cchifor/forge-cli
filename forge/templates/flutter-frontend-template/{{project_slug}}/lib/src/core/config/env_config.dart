@@ -1,8 +1,8 @@
 class EnvConfig {
   const EnvConfig({
     this.apiBaseUrl = '{{api_base_url}}',
+    this.authDisabled = {% if include_auth %}true{% else %}true{% endif %},
 {%- if include_auth %}
-    this.authDisabled = true,
     this.keycloakUrl = '{{keycloak_url}}',
     this.keycloakRealm = '{{keycloak_realm}}',
     this.keycloakClientId = '{{keycloak_client_id}}',
@@ -15,11 +15,11 @@ class EnvConfig {
         'API_BASE_URL',
         defaultValue: '{{api_base_url}}',
       ),
-{%- if include_auth %}
       authDisabled: bool.fromEnvironment(
         'AUTH_DISABLED',
-        defaultValue: true,
+        defaultValue: {% if include_auth %}true{% else %}true{% endif %},
       ),
+{%- if include_auth %}
       keycloakUrl: String.fromEnvironment(
         'KEYCLOAK_URL',
         defaultValue: '{{keycloak_url}}',
@@ -37,8 +37,8 @@ class EnvConfig {
   }
 
   final String apiBaseUrl;
-{%- if include_auth %}
   final bool authDisabled;
+{%- if include_auth %}
   final String keycloakUrl;
   final String keycloakRealm;
   final String keycloakClientId;

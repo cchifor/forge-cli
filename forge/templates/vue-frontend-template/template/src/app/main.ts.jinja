@@ -5,9 +5,7 @@ import { VueQueryPlugin } from '@tanstack/vue-query'
 import App from './App.vue'
 import router from './router'
 import { queryClient } from './providers/query-client'
-{%- if include_auth %}
 import { useAuth } from '@/shared/composables/useAuth'
-{%- endif %}
 import { configureApiClient } from '@/shared/api/client'
 import { useSettingsStore } from '@/shared/stores/settings.store'
 
@@ -27,11 +25,11 @@ async function bootstrap() {
   app.use(router)
   app.use(VueQueryPlugin, { queryClient })
 
-{%- if include_auth %}
-  // Initialize auth
+  // Initialize auth (handles VITE_AUTH_DISABLED internally)
   const auth = useAuth()
   await auth.init()
 
+{%- if include_auth %}
   // Wire auth into API client
   configureApiClient({
     getToken: auth.getToken,
