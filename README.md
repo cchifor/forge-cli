@@ -47,11 +47,15 @@ uvx --from git+https://github.com/cchifor/forge-cli.git forge \
   --config stack.yaml --yes --no-docker
 ```
 
-Or pipe JSON directly from an AI agent (no file on disk):
+For AI agents, add `--json` to get machine-readable output with zero noise:
 
 ```bash
 echo '{"project_name":"my-shop","frontend":{"framework":"vue","features":"products,orders"}}' \
-  | uvx --from git+https://github.com/cchifor/forge-cli.git forge --config - --yes --no-docker
+  | uvx --from git+https://github.com/cchifor/forge-cli.git forge --config - --yes --no-docker --json
+```
+
+```json
+{"project_root": "/path/to/my_shop", "backend_dir": "/path/to/my_shop/backend", "frontend_dir": "/path/to/my_shop/frontend", "framework": "vue", "features": ["products", "orders"]}
 ```
 
 `uvx` downloads forge into a temporary cached environment, runs it, and exits. No global install needed. See [Usage > Headless](#headless-scripts-cicd-ai-agents) for the full config file format and all CLI flags.
@@ -118,6 +122,26 @@ echo '{"project_name":"my-shop","frontend":{"framework":"vue","features":"produc
   | forge --config - --yes --no-docker
 ```
 
+**Machine-readable JSON output (`--json`):**
+
+```bash
+forge --config stack.yaml --yes --no-docker --json
+```
+
+Outputs a single JSON object to stdout -- no progress messages, no Copier logs:
+
+```json
+{"project_root": "/path/to/my_shop", "backend_dir": "/path/to/my_shop/backend", "frontend_dir": "/path/to/my_shop/frontend", "framework": "vue", "features": ["products", "orders"]}
+```
+
+**Silent mode (`--quiet`):**
+
+```bash
+forge --config stack.yaml --yes --no-docker --quiet
+```
+
+Zero output. Useful when forge is called from a wrapper script that only cares about the exit code.
+
 <details>
 <summary>All CLI flags</summary>
 
@@ -145,6 +169,8 @@ echo '{"project_name":"my-shop","frontend":{"framework":"vue","features":"produc
 | `--keycloak-client-id ID` | Keycloak client ID | derived from name |
 | `--yes`, `-y` | Skip confirmation prompts | |
 | `--no-docker` | Skip Docker Compose boot | |
+| `--quiet`, `-q` | Suppress all progress output | |
+| `--json` | Print machine-readable JSON result to stdout | |
 
 CLI flags override config file values. Config file values override defaults.
 

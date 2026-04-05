@@ -60,6 +60,7 @@ packages = ["src/app", "src/service"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "--cov --cov-report=term-missing --cov-report=html"
 markers = [
     "slow: marks tests as slow",
     "integration: integration tests",
@@ -78,3 +79,26 @@ select = ["E", "F", "I", "W"]
 python_version = "3.13"
 plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["src/app", "src/service"]
+omit = [
+    "*/migrations/*",
+    "*/alembic/*",
+    "*/__pycache__/*",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"

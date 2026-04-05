@@ -66,6 +66,9 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--no-auth", dest="include_auth", action="store_false")
     p.add_argument("--include-chat", action="store_true", default=None)
     p.add_argument("--include-openapi", action="store_true", default=None)
+    p.add_argument("--no-e2e-tests", dest="generate_e2e_tests",
+                    action="store_false", default=None,
+                    help="Skip Playwright e2e test generation")
 
     # Keycloak
     p.add_argument("--keycloak-port", type=int, metavar="PORT")
@@ -77,6 +80,10 @@ def _parse_args() -> argparse.Namespace:
                     help="Skip confirmation prompts")
     p.add_argument("--no-docker", action="store_true",
                     help="Skip Docker Compose boot")
+    p.add_argument("--quiet", "-q", action="store_true",
+                    help="Suppress progress output (implies quiet Copier)")
+    p.add_argument("--json", dest="json_output", action="store_true",
+                    help="Print machine-readable JSON result to stdout")
 
     return p.parse_args()
 
@@ -173,6 +180,7 @@ def _build_config(args: argparse.Namespace, cfg: dict) -> ProjectConfig:
             server_port=_get(args, "frontend_port", cfg, "frontend", "server_port", default=5173),
             default_color_scheme=_get(args, "color_scheme", cfg, "frontend", "default_color_scheme", default="blue"),
             org_name=_get(args, "org_name", cfg, "frontend", "org_name", default="com.example"),
+            generate_e2e_tests=_get(args, "generate_e2e_tests", cfg, "frontend", "generate_e2e_tests", default=True),
         )
 
     # Keycloak
@@ -434,7 +442,8 @@ def main() -> None:
             print(f"  Configuration error: {e}")
             sys.exit(2)
 
-        _print_summary(config)
+        if not getattr(args, "quiet", False) and not getattr(args, "json_output", False):
+            _print_summary(config)
 
         if not args.yes:
             if not _ask_confirm("Proceed with generation?"):
@@ -447,9 +456,24 @@ def main() -> None:
             print("\n  Aborted.")
             sys.exit(0)
 
-    print()
-    project_root = generate(config)
-    print(f"\n  Project generated at: {project_root}")
+    quiet = getattr(args, "quiet", False) or getattr(args, "json_output", False)
+
+    if not quiet:
+        print()
+    project_root = generate(config, quiet=quiet)
+
+    if getattr(args, "json_output", False):
+        result = {"project_root": str(project_root)}
+        if config.backend:
+            result["backend_dir"] = str(project_root / config.backend_slug)
+        if config.frontend and config.frontend.framework != FrontendFramework.NONE:
+            result["frontend_dir"] = str(project_root / config.frontend_slug)
+            result["framework"] = config.frontend.framework.value
+            result["features"] = config.frontend.features
+        print(json.dumps(result))
+    else:
+        if not quiet:
+            print(f"\n  Project generated at: {project_root}")
 
     if not args.no_docker and config.backend is not None:
         if args.yes:

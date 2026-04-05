@@ -36,6 +36,7 @@ from app.services.health_service import HealthService
 from app.services.item_service import ItemService
 from service.domain.account import Account
 from service.domain.user import User
+from service.tasks.service import TaskService
 from service.uow.aio import AsyncUnitOfWork
 
 os.environ["ENV"] = "testing"
@@ -122,6 +123,10 @@ class TestProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_item_service(self, auth_uow: AuthUnitOfWork) -> ItemService:
         return ItemService(uow=auth_uow)
+
+    @provide
+    def get_task_service(self) -> TaskService:
+        return TaskService(session_factory=self._session_factory)
 
     @provide(scope=Scope.REQUEST)
     def get_session_factory(self) -> async_sessionmaker:

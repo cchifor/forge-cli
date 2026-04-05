@@ -13,6 +13,7 @@ from copier import run_copy
 from forge import variable_mapper
 from forge.config import FrontendFramework, ProjectConfig
 from forge.docker_manager import render_compose, render_frontend_dockerfile, render_nginx_conf
+from forge.e2e_templates import generate_e2e_conftest, generate_e2e_test
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -24,26 +25,31 @@ TEMPLATE_DIRS = {
 }
 
 
-def generate(config: ProjectConfig) -> Path:
+def generate(config: ProjectConfig, quiet: bool = False) -> Path:
     """Generate all project components and return the project root path."""
     project_root = Path(config.output_dir).resolve() / config.project_slug
     project_root.mkdir(parents=True, exist_ok=True)
 
+    def _log(msg: str) -> None:
+        if not quiet:
+            print(msg)
+
     # 1. Generate backend
     if config.backend:
-        print("  Generating backend ...")
-        backend_dir = _generate_backend(config, project_root)
-        print("  Setting up backend ...")
-        _setup_backend(backend_dir)
+        _log("  Generating backend ...")
+        backend_dir = _generate_backend(config, project_root, quiet=quiet)
+        if not quiet:
+            print("  Setting up backend ...")
+            _setup_backend(backend_dir)
 
     # 2. Generate frontend
     if config.frontend and config.frontend.framework != FrontendFramework.NONE:
-        print(f"  Generating {config.frontend.framework.value} frontend ...")
-        _generate_frontend(config, project_root)
+        _log(f"  Generating {config.frontend.framework.value} frontend ...")
+        _generate_frontend(config, project_root, quiet=quiet)
 
     # 3. Render Docker Compose
     if config.backend:
-        print("  Rendering docker-compose.yml ...")
+        _log("  Rendering docker-compose.yml ...")
         render_compose(config, project_root)
         # Copy Keycloak DB init script if auth is enabled
         if config.include_keycloak:
@@ -53,22 +59,63 @@ def generate(config: ProjectConfig) -> Path:
             dst = project_root / "init-db.sh"
             dst.write_bytes(src.replace("\r\n", "\n").encode("utf-8"))
 
-    # 4. Render frontend Dockerfile and nginx.conf (all frameworks)
+    # 4. Generate Playwright e2e tests
+    if (
+        config.frontend
+        and config.frontend.framework != FrontendFramework.NONE
+        and config.frontend.generate_e2e_tests
+    ):
+        _log("  Generating Playwright e2e tests ...")
+        _generate_e2e_tests(config, project_root)
+
+    # 5. Render frontend Dockerfile and nginx.conf (all frameworks)
     if config.frontend and config.frontend.framework != FrontendFramework.NONE:
-        print("  Rendering frontend Dockerfile ...")
+        _log("  Rendering frontend Dockerfile ...")
         frontend_dir = project_root / config.frontend_slug
         render_frontend_dockerfile(config, frontend_dir)
         render_nginx_conf(config, frontend_dir)
 
-    # 5. Clean up per-template .git repos and create unified one
-    print("  Initializing git repository ...")
+    # 6. Clean up per-template .git repos and create unified one
+    _log("  Initializing git repository ...")
     _cleanup_sub_git_repos(project_root)
     _git_init(project_root)
 
     return project_root
 
 
-def _generate_backend(config: ProjectConfig, project_root: Path) -> Path:
+def _make_feature_context(plural_name: str) -> dict[str, str]:
+    """Derive all naming variants from a plural feature name."""
+    singular = (
+        plural_name.rstrip("s")
+        if plural_name.endswith("s") and len(plural_name) > 1
+        else plural_name
+    )
+    return {
+        "plural": plural_name,
+        "singular": singular,
+        "Plural": plural_name[0].upper() + plural_name[1:],
+        "Singular": singular[0].upper() + singular[1:],
+    }
+
+
+def _generate_e2e_tests(config: ProjectConfig, project_root: Path) -> None:
+    """Generate Playwright e2e test files for each frontend feature."""
+    e2e_dir = project_root / "tests" / "e2e"
+    e2e_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write conftest.py
+    conftest_path = e2e_dir / "conftest.py"
+    conftest_path.write_text(generate_e2e_conftest(), encoding="utf-8")
+
+    # Write per-feature test files
+    for feature_name in config.frontend.features:
+        ctx = _make_feature_context(feature_name)
+        test_content = generate_e2e_test(ctx)
+        test_path = e2e_dir / f"test_{feature_name}.py"
+        test_path.write_text(test_content, encoding="utf-8")
+
+
+def _generate_backend(config: ProjectConfig, project_root: Path, quiet: bool = False) -> Path:
     """Generate backend using Copier (_subdirectory: template)."""
     ctx = variable_mapper.backend_context(config)
     dst = project_root / config.backend_slug
@@ -80,11 +127,12 @@ def _generate_backend(config: ProjectConfig, project_root: Path) -> Path:
         unsafe=True,
         defaults=True,
         overwrite=True,
+        quiet=quiet,
     )
     return dst
 
 
-def _generate_frontend(config: ProjectConfig, project_root: Path) -> Path:
+def _generate_frontend(config: ProjectConfig, project_root: Path, quiet: bool = False) -> Path:
     """Generate frontend using Copier."""
     fw = config.frontend.framework
     template_dir = TEMPLATE_DIRS.get(fw)
@@ -103,6 +151,7 @@ def _generate_frontend(config: ProjectConfig, project_root: Path) -> Path:
             unsafe=True,
             defaults=True,
             overwrite=True,
+            quiet=quiet,
         )
     else:
         # Vue/Svelte use _subdirectory: template, generating INTO dst_path.
@@ -115,6 +164,7 @@ def _generate_frontend(config: ProjectConfig, project_root: Path) -> Path:
             unsafe=True,
             defaults=True,
             overwrite=True,
+            quiet=quiet,
         )
 
     return project_root / config.frontend_slug

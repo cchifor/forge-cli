@@ -78,6 +78,7 @@ class FrontendConfig:
     org_name: str = "com.example"  # Flutter only
     api_base_url: str = ""
     api_proxy_target: str = ""
+    generate_e2e_tests: bool = True
 
     def validate(self) -> None:
         if self.framework == FrontendFramework.NONE:

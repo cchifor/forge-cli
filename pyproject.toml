@@ -17,6 +17,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=6.0",
     "pyyaml>=6.0",
 ]
 
@@ -32,3 +33,23 @@ include = ["forge*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--cov --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["forge"]
+omit = [
+    "forge/templates/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+fail_under = 65
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"

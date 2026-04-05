@@ -291,6 +291,7 @@ FEATURE_CARD = """\
 
 <div
 \tclass="rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50 cursor-pointer"
+\tdata-testid="{singular}-card"
 \tonclick={{onview}}
 \trole="button"
 \ttabindex="0"
@@ -298,7 +299,7 @@ FEATURE_CARD = """\
 >
 \t<div class="flex items-start justify-between gap-2">
 \t\t<div class="min-w-0 flex-1">
-\t\t\t<h3 class="font-medium truncate">{{item.name}}</h3>
+\t\t\t<h3 class="font-medium truncate" data-testid="{singular}-name">{{item.name}}</h3>
 \t\t\t{{#if item.description}}
 \t\t\t\t<p class="text-sm text-muted-foreground line-clamp-2 mt-0.5">{{item.description}}</p>
 \t\t\t{{/if}}
@@ -317,7 +318,7 @@ FEATURE_CARD = """\
 \t\t\t\t\t\t<button class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent" onclick={{() => {{ menuOpen = false; onview?.(); }}}}>
 \t\t\t\t\t\t\t<Eye class="h-4 w-4" /> View
 \t\t\t\t\t\t</button>
-\t\t\t\t\t\t<button class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-accent" onclick={{() => {{ menuOpen = false; ondelete?.(); }}}}>
+\t\t\t\t\t\t<button class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-accent" data-testid="{singular}-delete-btn" onclick={{() => {{ menuOpen = false; ondelete?.(); }}}}>
 \t\t\t\t\t\t\t<Trash2 class="h-4 w-4" /> Delete
 \t\t\t\t\t\t</button>
 \t\t\t\t\t</div>
@@ -379,20 +380,20 @@ ROUTE_LIST = """\
 \t}}
 </script>
 
-<div class="space-y-4">
+<div class="space-y-4" data-testid="{plural}-list">
 \t<div class="flex items-center justify-between">
 \t\t<div>
 \t\t\t<h1 class="text-3xl font-bold tracking-tight">{Plural}</h1>
 \t\t\t<p class="text-muted-foreground">Manage your {plural}</p>
 \t\t</div>
-\t\t<a href="/{plural}/new" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90">
+\t\t<a href="/{plural}/new" data-testid="{plural}-create-btn" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90">
 \t\t\t<Plus class="h-4 w-4" /> New {Singular}
 \t\t</a>
 \t</div>
 
 \t<div class="flex flex-col sm:flex-row gap-3">
 \t\t<div class="flex-1 max-w-sm">
-\t\t\t<SearchField bind:value={{filters.searchInput}} placeholder="Search {plural}..." />
+\t\t\t<SearchField bind:value={{filters.searchInput}} placeholder="Search {plural}..." data-testid="{plural}-search-input" />
 \t\t</div>
 \t\t<SegmentedButton
 \t\t\toptions={{[
@@ -519,11 +520,11 @@ ROUTE_CREATE = """\
 \t\t\t<form class="space-y-4" onsubmit={{(e) => {{ e.preventDefault(); handleSubmit(); }}}}>
 \t\t\t\t<div class="space-y-2">
 \t\t\t\t\t<label for="name" class="text-sm font-medium">Name *</label>
-\t\t\t\t\t<input id="name" type="text" placeholder="Enter name" required bind:value={{form.name}} class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+\t\t\t\t\t<input id="name" type="text" placeholder="Enter name" required bind:value={{form.name}} data-testid="{singular}-name-input" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
 \t\t\t\t</div>
 \t\t\t\t<div class="space-y-2">
 \t\t\t\t\t<label for="description" class="text-sm font-medium">Description</label>
-\t\t\t\t\t<textarea id="description" rows="3" bind:value={{form.description}} class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea>
+\t\t\t\t\t<textarea id="description" rows="3" bind:value={{form.description}} data-testid="{singular}-description-input" class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea>
 \t\t\t\t</div>
 \t\t\t\t<div class="space-y-2">
 \t\t\t\t\t<label for="status" class="text-sm font-medium">Status</label>
@@ -540,8 +541,8 @@ ROUTE_CREATE = """\
 \t\t\t</form>
 \t\t</div>
 \t\t<div class="flex items-center gap-2 p-6 pt-0">
-\t\t\t<button class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground" onclick={{() => goto('/{plural}')}}>Cancel</button>
-\t\t\t<button class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50" disabled={{$createMut.isPending}} onclick={{handleSubmit}}>
+\t\t\t<button data-testid="{singular}-cancel-btn" class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground" onclick={{() => goto('/{plural}')}}>Cancel</button>
+\t\t\t<button data-testid="{singular}-submit-btn" class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50" disabled={{$createMut.isPending}} onclick={{handleSubmit}}>
 \t\t\t\t{{$createMut.isPending ? 'Creating...' : 'Create {Singular}'}}
 \t\t\t</button>
 \t\t</div>
@@ -600,7 +601,7 @@ ROUTE_DETAIL = """\
 \t}}
 </script>
 
-<div class="space-y-4">
+<div class="space-y-4" data-testid="{singular}-detail">
 \t<div class="flex items-center gap-2">
 \t\t<button class="btn-press inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground" onclick={{() => goto('/{plural}')}}>
 \t\t\t<ArrowLeft class="h-4 w-4" />
@@ -610,10 +611,10 @@ ROUTE_DETAIL = """\
 \t\t\t<p class="text-muted-foreground">View and manage details</p>
 \t\t</div>
 \t\t{{#if ${singular}Query.data && !editing}}
-\t\t\t<button class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground" onclick={{() => editing = true}}>
+\t\t\t<button data-testid="{singular}-edit-btn" class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground" onclick={{() => editing = true}}>
 \t\t\t\t<Pencil class="h-4 w-4" /> Edit
 \t\t\t</button>
-\t\t\t<button class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90" onclick={{() => deleteDialogOpen = true}}>
+\t\t\t<button data-testid="{singular}-delete-btn" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90" onclick={{() => deleteDialogOpen = true}}>
 \t\t\t\t<Trash2 class="h-4 w-4" /> Delete
 \t\t\t</button>
 \t\t{{/if}}
@@ -650,7 +651,7 @@ ROUTE_DETAIL = """\
 \t\t\t{{#if editing}}
 \t\t\t\t<div class="flex items-center gap-2 p-6 pt-0">
 \t\t\t\t\t<button class="inline-flex h-10 items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent" onclick={{() => {{ if (${singular}Query.data) form.reset(${singular}Query.data); editing = false; }}}}><X class="h-4 w-4" /> Cancel</button>
-\t\t\t\t\t<button class="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50" disabled={{$updateMut.isPending}} onclick={{saveEdit}}><Save class="h-4 w-4" /> {{$updateMut.isPending ? 'Saving...' : 'Save'}}</button>
+\t\t\t\t\t<button data-testid="{singular}-save-btn" class="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50" disabled={{$updateMut.isPending}} onclick={{saveEdit}}><Save class="h-4 w-4" /> {{$updateMut.isPending ? 'Saving...' : 'Save'}}</button>
 \t\t\t\t</div>
 \t\t\t{{/if}}
 \t\t</div>

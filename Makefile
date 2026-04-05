@@ -11,3 +11,9 @@ install-dev: sync-templates
 
 clean:
 	python sync_templates.py --clean
+
+test:
+	uv run pytest
+
+test-cov:
+	uv run pytest --cov-report=html
