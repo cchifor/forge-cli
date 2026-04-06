@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { X, Send, Sparkles, User } from 'lucide-vue-next'
+import { X, Send, Sparkles } from 'lucide-vue-next'
 import { Button } from '@/shared/ui/button'
 import { useAiChat } from '../composables/useAiChat'
-import { useAuth } from '@/shared/composables/useAuth'
+import AiChatMessage from './AiChatMessage.vue'
+import AgentStatusBar from './AgentStatusBar.vue'
 
 const route = useRoute()
-const { user } = useAuth()
 const {
   messages,
   isGenerating,
@@ -88,51 +88,16 @@ watch(messages, () => nextTick(scrollToBottom), { deep: true })
         </p>
       </div>
 
-      <div
-        v-for="msg in messages"
+      <AiChatMessage
+        v-for="(msg, idx) in messages"
         :key="msg.id"
-        class="flex gap-3"
-        :class="msg.role === 'user' ? 'flex-row-reverse' : ''"
-      >
-        <!-- Avatar -->
-        <div
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-          :class="msg.role === 'assistant' ? 'ai-gradient' : 'bg-primary'"
-        >
-          <Sparkles v-if="msg.role === 'assistant'" class="h-3.5 w-3.5 text-white" />
-          <User v-else class="h-3.5 w-3.5 text-primary-foreground" />
-        </div>
-        <!-- Bubble -->
-        <div class="flex max-w-[80%] flex-col gap-0.5">
-          <span class="text-xs font-medium" :class="msg.role === 'assistant' ? 'text-ai-from' : 'text-primary'">
-            {{ msg.role === 'assistant' ? 'AI' : user?.firstName || 'You' }}
-          </span>
-          <div
-            class="rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
-            :class="
-              msg.role === 'user'
-                ? 'bg-primary text-primary-foreground'
-                : 'ai-gradient text-white'
-            "
-          >
-            {{ msg.content }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Typing indicator -->
-      <div v-if="isGenerating" class="flex gap-3">
-        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full ai-gradient">
-          <Sparkles class="h-3.5 w-3.5 text-white" />
-        </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-xs font-medium text-ai-from">AI</span>
-          <div class="ai-gradient ai-pulse rounded-2xl px-4 py-2.5 text-sm text-white">
-            Thinking...
-          </div>
-        </div>
-      </div>
+        :message="msg"
+        :is-streaming="isGenerating && msg.role === 'assistant' && idx === messages.length - 1"
+      />
     </div>
+
+    <!-- Status bar -->
+    <AgentStatusBar />
 
     <!-- Input -->
     <div class="shrink-0 border-t p-3">

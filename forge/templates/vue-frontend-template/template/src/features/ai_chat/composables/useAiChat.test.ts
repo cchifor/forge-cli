@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { ref, shallowRef } from 'vue'
 
 // Mock crypto.randomUUID for deterministic IDs
 let uuidCounter = 0
@@ -20,6 +21,39 @@ const localStorageMock = (() => {
 
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock })
 
+// Mock useAgentClient
+const mockMessages = shallowRef<Array<{ id: string; role: string; content: string }>>([])
+const mockIsRunning = ref(false)
+const mockState = shallowRef({})
+const mockCustomState = shallowRef({})
+const mockError = ref<Error | null>(null)
+const mockRunAgent = vi.fn()
+const mockAddUserMessage = vi.fn((content: string) => {
+  mockMessages.value = [
+    ...mockMessages.value,
+    { id: crypto.randomUUID(), role: 'user', content },
+  ]
+})
+const mockResetThread = vi.fn(() => {
+  mockMessages.value = []
+  mockState.value = {}
+  mockCustomState.value = {}
+  mockError.value = null
+})
+
+vi.mock('./useAgentClient', () => ({
+  useAgentClient: () => ({
+    messages: mockMessages,
+    isRunning: mockIsRunning,
+    state: mockState,
+    customState: mockCustomState,
+    error: mockError,
+    runAgent: mockRunAgent,
+    addUserMessage: mockAddUserMessage,
+    resetThread: mockResetThread,
+  }),
+}))
+
 import { useAiChat } from './useAiChat'
 import { useUiStore } from '@/shared/stores/ui.store'
 
@@ -28,6 +62,12 @@ describe('useAiChat', () => {
     setActivePinia(createPinia())
     localStorageMock.clear()
     uuidCounter = 0
+    mockMessages.value = []
+    mockIsRunning.value = false
+    mockState.value = {}
+    mockCustomState.value = {}
+    mockError.value = null
+    vi.clearAllMocks()
   })
 
   it('starts with empty messages', () => {
@@ -40,28 +80,41 @@ describe('useAiChat', () => {
     expect(chat.isGenerating.value).toBe(false)
   })
 
-  it('sendMessage adds a user message', () => {
+  it('sendMessage adds a user message and runs agent', () => {
     const chat = useAiChat()
     chat.sendMessage('Hello')
 
-    expect(chat.messages.value).toHaveLength(1)
-    expect(chat.messages.value[0].role).toBe('user')
-    expect(chat.messages.value[0].content).toBe('Hello')
+    expect(mockAddUserMessage).toHaveBeenCalledWith('Hello')
+    expect(mockRunAgent).toHaveBeenCalled()
   })
 
-  it('sendMessage sets isGenerating to true', () => {
+  it('messages are derived from agent client messages', () => {
     const chat = useAiChat()
-    chat.sendMessage('Hello')
+    mockMessages.value = [
+      { id: 'uuid-1', role: 'user', content: 'Hello' },
+      { id: 'uuid-2', role: 'assistant', content: 'Hi there' },
+    ]
 
+    expect(chat.messages.value).toHaveLength(2)
+    expect(chat.messages.value[0].role).toBe('user')
+    expect(chat.messages.value[0].content).toBe('Hello')
+    expect(chat.messages.value[1].role).toBe('assistant')
+    expect(chat.messages.value[1].content).toBe('Hi there')
+  })
+
+  it('isGenerating reflects agent isRunning', () => {
+    const chat = useAiChat()
+    expect(chat.isGenerating.value).toBe(false)
+
+    mockIsRunning.value = true
     expect(chat.isGenerating.value).toBe(true)
   })
 
-  it('clearMessages empties the messages array', () => {
+  it('clearMessages delegates to agent resetThread', () => {
     const chat = useAiChat()
-    chat.sendMessage('First')
     chat.clearMessages()
 
-    expect(chat.messages.value).toHaveLength(0)
+    expect(mockResetThread).toHaveBeenCalled()
   })
 
   it('toggleChat delegates to uiStore.toggleChat', () => {

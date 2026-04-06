@@ -47,7 +47,7 @@ uvx --from git+https://github.com/cchifor/forge-cli.git forge \
   --config stack.yaml --yes --no-docker
 ```
 
-For AI agents, add `--json` to get machine-readable output with zero noise:
+For AI agents, add `--json` to get machine-readable output on stdout (all progress goes to stderr):
 
 ```bash
 echo '{"project_name":"my-shop","frontend":{"framework":"vue","features":"products,orders"}}' \
@@ -58,7 +58,12 @@ echo '{"project_name":"my-shop","frontend":{"framework":"vue","features":"produc
 {"project_root": "/path/to/my_shop", "backend_dir": "/path/to/my_shop/backend", "frontend_dir": "/path/to/my_shop/frontend", "framework": "vue", "features": ["products", "orders"]}
 ```
 
-`uvx` downloads forge into a temporary cached environment, runs it, and exits. No global install needed. See [Usage > Headless](#headless-scripts-cicd-ai-agents) for the full config file format and all CLI flags.
+On error, `--json` returns a JSON error object and exits with code 2:
+```json
+{"error": "Failed to load config: ..."}
+```
+
+`uvx` downloads forge into a temporary cached environment, runs it, and exits. No global install, no TTY required. See [Usage > Headless](#headless-scripts-cicd-ai-agents) for the full config file format and all CLI flags.
 
 ---
 
@@ -128,10 +133,15 @@ echo '{"project_name":"my-shop","frontend":{"framework":"vue","features":"produc
 forge --config stack.yaml --yes --no-docker --json
 ```
 
-Outputs a single JSON object to stdout -- no progress messages, no Copier logs:
+Outputs a single JSON object to stdout. All progress messages go to stderr, so stdout is always parseable:
 
 ```json
 {"project_root": "/path/to/my_shop", "backend_dir": "/path/to/my_shop/backend", "frontend_dir": "/path/to/my_shop/frontend", "framework": "vue", "features": ["products", "orders"]}
+```
+
+On error, returns a JSON error object (exit code 2):
+```json
+{"error": "Port 5000 is used by both frontend and backend."}
 ```
 
 **Silent mode (`--quiet`):**
@@ -141,6 +151,10 @@ forge --config stack.yaml --yes --no-docker --quiet
 ```
 
 Zero output. Useful when forge is called from a wrapper script that only cares about the exit code.
+
+**Non-TTY safety:**
+
+Forge detects when no terminal is attached. In headless mode (`--config`, `--yes`, `--json`, etc.), it runs without prompts. If no headless flags are provided and stdin is not a TTY, forge exits immediately with a clear error instead of hanging.
 
 <details>
 <summary>All CLI flags</summary>
@@ -164,6 +178,7 @@ Zero output. Useful when forge is called from a wrapper script that only cares a
 | `--no-auth` | Disable Keycloak authentication | |
 | `--include-chat` | Enable AI chat panel | |
 | `--include-openapi` | Enable OpenAPI code generation | |
+| `--no-e2e-tests` | Skip Playwright e2e test generation | |
 | `--keycloak-port PORT` | Keycloak host port | `8080` |
 | `--keycloak-realm REALM` | Keycloak realm | `master` |
 | `--keycloak-client-id ID` | Keycloak client ID | derived from name |
@@ -173,6 +188,8 @@ Zero output. Useful when forge is called from a wrapper script that only cares a
 | `--json` | Print machine-readable JSON result to stdout | |
 
 CLI flags override config file values. Config file values override defaults.
+
+**Exit codes:** `0` success, `1` user cancelled, `2` config/validation error.
 
 </details>
 
@@ -222,8 +239,10 @@ Backend only                 Frontend only              Full stack
 - **Flexible** -- backend only, frontend only, or full stack from a single command.
 - **Four templates** -- Python/FastAPI, Vue 3, Svelte 5, Flutter -- bundled and version-controlled.
 - **Full CRUD generation** -- each entity produces domain models, ORM models, repositories, services, REST endpoints, API clients, UI pages, and tests.
-- **Unified Docker Compose** -- renders only the services you selected.
+- **Agentic UI** -- split-pane workspace with AG-UI protocol (SSE streaming) and MCP ext-apps (sandboxed iframes). Dual-engine architecture for native Vue components and third-party extensions.
+- **Production Docker** -- two-stage builds (builder + nginx/python slim), migration init container, health checks.
 - **Keycloak integration** -- provisions a dev container, JWT auth, and route guards with one toggle.
+- **Headless mode** -- `--config`, `--json`, `--quiet` for CI/CD pipelines and AI agents. No TTY required.
 - **Cross-platform** -- Windows, Linux, macOS.
 
 ### Tech Stack
@@ -232,7 +251,7 @@ Backend only                 Frontend only              Full stack
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **CLI**     | Python 3.11+,[Copier](https://github.com/copier-org/copier), [Questionary](https://github.com/tmbo/questionary), [Jinja2](https://github.com/pallets/jinja) |
 | **Backend** | FastAPI, SQLAlchemy, Alembic, Pydantic, Dishka (DI), uv                                                                                            |
-| **Vue**     | Vue 3, Vite, TanStack Query, Zod, Vue Router                                                                                                       |
+| **Vue**     | Vue 3, Vite, TanStack Query, Zod, Vue Router, [AG-UI](https://github.com/ag-ui-protocol/ag-ui), [MCP ext-apps](https://github.com/anthropics/ext-apps)  |
 | **Svelte**  | SvelteKit, Vite, OpenAPI TypeScript                                                                                                                |
 | **Flutter** | Flutter, Dart, Riverpod                                                                                                                            |
 | **Infra**   | Docker Compose, PostgreSQL 16, Keycloak 26, pgAdmin 4                                                                                              |
@@ -243,13 +262,13 @@ Backend only                 Frontend only              Full stack
 
 ### Docker Compose
 
-All services run on a shared `app-network` bridge. The frontend proxies `/api` to the backend via Docker DNS.
+All services run on a shared `app-network` bridge. The frontend (nginx) proxies `/api` to the backend via Docker DNS. A one-shot `migrate` container runs alembic before the backend starts.
 
 ```
-+-------------+     +-------------+     +-------------+
-|  frontend   |---->|  backend    |---->|  postgres   |
-|  :5173      |     |  :5000      |     |  :5432      |
-+-------------+     +------+------+     +-------------+
++-------------+     +-------------+     +-------------+     +-------------+
+|  frontend   |---->|  backend    |---->|  migrate    |---->|  postgres   |
+|  nginx :80  |     |  :5000      |     |  (one-shot) |     |  :5432      |
++-------------+     +------+------+     +-------------+     +-------------+
                            |
                     +------v------+
                     |  keycloak   |  (if auth enabled)
@@ -262,31 +281,71 @@ All services run on a shared `app-network` bridge. The frontend proxies `/api` t
                     +-------------+
 ```
 
-**Flutter exception**: Flutter projects are generated but excluded from Docker Compose. Run natively with `flutter run`.
+All frontends (Vue, Svelte, Flutter Web) use a two-stage Dockerfile: build stage + nginx:alpine runtime. The nginx config proxies `/api` to the backend via Docker DNS and serves the SPA with `try_files` fallback.
+
+### Agentic UI (Vue template)
+
+When `include_chat=true`, the Vue template includes a split-pane agentic UI with two rendering engines:
+
+```
+User message → useAiChat → useAgentClient → HTTP POST (SSE stream)
+                                                    |
+                    ┌───────────────────────────────┘
+                    v
+              SSE events
+    ├── TEXT_MESSAGE_*   → Chat pane (streaming text)
+    ├── TOOL_CALL_*      → Chat pane (tool status card)
+    ├── ACTIVITY_*       → Workspace pane (dynamic component)
+    ├── STATE_*          → Shared agent state
+    └── CUSTOM           → Status bar (cost, context)
+```
+
+**Dual-engine workspace**: The workspace renders components based on the `engine` field in each activity:
+
+| Engine | Component | Trust | Communication |
+|--------|-----------|-------|---------------|
+| `ag-ui` | Vue component from registry | Trusted -- direct Pinia/store access | Props + emits |
+| `mcp-ext` | Sandboxed iframe via AppBridge | Untrusted -- no store access | postMessage only |
+
+**Built-in workspace components** (AG-UI engine):
+- `CredentialForm` -- masked input fields for secrets
+- `FileExplorer` -- file browser with icons and sizes
+- `ApprovalReview` -- HITL tool approval with approve/reject
+- `FallbackActivity` -- JSON viewer for unknown activity types
+
+**HITL flow**: Agent calls approval-required tool → emits activity → workspace renders ApprovalReview → user approves/rejects → result sent back to agent.
 
 ### Generated project structure
 
 ```
 acme/
 ├── docker-compose.yml
+├── init-db.sh                  # Keycloak DB init (if auth enabled)
 ├── backend/                    # Python / FastAPI
-│   ├── Dockerfile
+│   ├── Dockerfile              # Two-stage: uv builder + python slim
 │   ├── pyproject.toml
 │   ├── alembic/
 │   ├── config/
 │   ├── src/
-│   │   ├── service/            # Shared infrastructure
-│   │   └── backend/            # Application code
-│   │       ├── api/v1/
-│   │       ├── data/models/
-│   │       ├── domain/
-│   │       └── services/
+│   │   ├── app/                # Application code
+│   │   │   ├── api/v1/
+│   │   │   ├── data/models/
+│   │   │   ├── domain/
+│   │   │   └── services/
+│   │   └── service/            # Shared infrastructure
 │   └── tests/
-└── frontend/                   # Vue 3 / Svelte 5
-    ├── Dockerfile
+└── frontend/                   # Vue 3 / Svelte 5 / Flutter Web
+    ├── Dockerfile              # Two-stage: node/flutter builder + nginx
+    ├── nginx.conf              # API proxy + SPA fallback
     ├── package.json
-    ├── vite.config.ts
     └── src/
+        ├── features/
+        │   ├── ai_chat/        # AG-UI chat + workspace (if include_chat)
+        │   │   ├── composables/  # useAgentClient, useWorkspace, useAiChat
+        │   │   ├── workspace/    # WorkspacePane, engines/, registry
+        │   │   └── ui/          # AiChat, AiChatMessage, StatusBar
+        │   └── home/           # Dashboard + health checks
+        └── shared/             # Layouts, stores, API client, auth
 ```
 
 ### Configuration reference
@@ -309,7 +368,7 @@ acme/
 | Toggle                  | Scope         | Default | Effect                                     |
 | ----------------------- | ------------- | ------- | ------------------------------------------ |
 | Keycloak authentication | Frontend      | Yes     | JWT auth, Keycloak container, route guards |
-| AI chat panel           | Frontend      | No      | Chat panel component                       |
+| AI chat panel           | Frontend      | No      | AG-UI chat + workspace with dual-engine rendering |
 | OpenAPI code generation | Vue / Flutter | No      | Generated API client from OpenAPI spec     |
 
 </details>
@@ -342,6 +401,7 @@ Svelte and Flutter generate analogous files.
 | PostgreSQL | `5432` |
 | pgAdmin    | `5050` |
 | Keycloak   | `8080` |
+| Agent (AG-UI) | `8000` |
 
 </details>
 
@@ -356,12 +416,22 @@ forge-cli/
 ├── install                     # Cross-platform installer (curl | bash)
 ├── pyproject.toml
 ├── forge/
-│   ├── cli.py                  # Interactive prompts and entry point
+│   ├── cli.py                  # Interactive + headless entry point
 │   ├── config.py               # Dataclasses, enums, validation
 │   ├── variable_mapper.py      # Config -> per-template data dicts
-│   ├── generator.py            # Copier orchestration
-│   ├── docker_manager.py       # Compose/Dockerfile rendering
+│   ├── generator.py            # Copier orchestration + backend setup
+│   ├── docker_manager.py       # Compose/Dockerfile/nginx rendering
+│   ├── e2e_templates.py        # Playwright e2e test generation
 │   └── templates/              # Bundled Copier templates
+│       ├── python-service-template/
+│       ├── vue-frontend-template/
+│       ├── svelte-frontend-template/
+│       ├── flutter-frontend-template/
+│       ├── docker-compose.yml.j2
+│       ├── Dockerfile.node.j2
+│       ├── Dockerfile.flutter.j2
+│       ├── nginx.conf.j2
+│       └── init-db.sh
 └── tests/
 ```
 

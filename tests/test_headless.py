@@ -18,6 +18,7 @@ def _default_args(**overrides):
         color_scheme=None, org_name=None, include_auth=None, include_chat=None,
         include_openapi=None, keycloak_port=None, keycloak_realm=None,
         keycloak_client_id=None, yes=False, no_docker=False,
+        quiet=False, json_output=False,
     )
     defaults.update(overrides)
     return Namespace(**defaults)
@@ -102,7 +103,6 @@ class TestLoadConfigFile:
         result = _load_config_file(str(f))
         assert result["project_name"] == "test"
 
-    def test_missing_file_exits(self, tmp_path):
-        with pytest.raises(SystemExit) as exc:
+    def test_missing_file_raises(self, tmp_path):
+        with pytest.raises(ValueError, match="Config file not found"):
             _load_config_file(str(tmp_path / "nope.json"))
-        assert exc.value.code == 2

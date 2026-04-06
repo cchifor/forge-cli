@@ -1,6 +1,7 @@
-import { ref, readonly } from 'vue'
+import { computed, ref, readonly } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/shared/stores/ui.store'
+import { useAgentClient } from './useAgentClient'
 
 export interface ChatMessage {
   id: string
@@ -9,13 +10,25 @@ export interface ChatMessage {
   timestamp: Date
 }
 
-const messages = ref<ChatMessage[]>([])
-const isGenerating = ref(false)
 const chatContext = ref('Current Page')
 
 export function useAiChat() {
   const uiStore = useUiStore()
   const { chatOpen } = storeToRefs(uiStore)
+  const agentClient = useAgentClient()
+
+  const messages = computed<ChatMessage[]>(() =>
+    agentClient.messages.value
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: typeof m.content === 'string' ? m.content : '',
+        timestamp: new Date(),
+      })),
+  )
+
+  const isGenerating = computed(() => agentClient.isRunning.value)
 
   function toggleChat() {
     uiStore.toggleChat()
@@ -30,35 +43,22 @@ export function useAiChat() {
   }
 
   function sendMessage(content: string) {
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content,
-      timestamp: new Date(),
-    }
-    messages.value.push(userMsg)
-
-    isGenerating.value = true
-    setTimeout(() => {
-      messages.value.push({
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: 'This is a placeholder response. AI integration coming soon.',
-        timestamp: new Date(),
-      })
-      isGenerating.value = false
-    }, 1500)
+    agentClient.addUserMessage(content)
+    agentClient.runAgent()
   }
 
   function clearMessages() {
-    messages.value = []
+    agentClient.resetThread()
   }
 
   return {
     chatOpen: readonly(chatOpen),
-    messages: readonly(messages),
-    isGenerating: readonly(isGenerating),
+    messages,
+    isGenerating,
     chatContext,
+    agentState: agentClient.state,
+    customState: agentClient.customState,
+    runError: agentClient.error,
     toggleChat,
     openChat,
     closeChat,

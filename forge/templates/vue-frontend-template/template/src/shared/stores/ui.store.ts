@@ -8,6 +8,7 @@ export const useUiStore = defineStore('ui', () => {
   const chatWidthRatio = ref(
     parseFloat(localStorage.getItem('chat-width-ratio') || '0.33'),
   )
+  const workspacePaneVisible = ref(false)
 
   function toggleSidebar() {
     sidebarCollapsed.value = !sidebarCollapsed.value
@@ -45,11 +46,20 @@ export const useUiStore = defineStore('ui', () => {
     localStorage.setItem('chat-width-ratio', String(chatWidthRatio.value))
   }
 
+  function toggleWorkspacePane() {
+    workspacePaneVisible.value = !workspacePaneVisible.value
+  }
+
+  function setWorkspacePaneVisible(value: boolean) {
+    workspacePaneVisible.value = value
+  }
+
   return {
     sidebarCollapsed,
     mobileMenuOpen,
     chatOpen,
     chatWidthRatio,
+    workspacePaneVisible,
     toggleSidebar,
     setSidebarCollapsed,
     toggleMobileMenu,
@@ -58,5 +68,7 @@ export const useUiStore = defineStore('ui', () => {
     setChatOpen,
     setChatWidthRatio,
     commitChatWidthRatio,
+    toggleWorkspacePane,
+    setWorkspacePaneVisible,
   }
 })

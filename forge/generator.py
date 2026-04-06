@@ -172,14 +172,19 @@ def _generate_frontend(config: ProjectConfig, project_root: Path, quiet: bool = 
 
 def _run_backend_cmd(backend_dir: Path, cmd: list[str], description: str) -> bool:
     """Run a command in the backend directory, printing status."""
-    result = subprocess.run(
-        cmd,
-        cwd=str(backend_dir),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(backend_dir),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"  [!!] {description} timed out (5m)")
+        return False
     if result.returncode == 0:
         print(f"  [ok] {description}")
         return True
@@ -216,18 +221,30 @@ def _cleanup_sub_git_repos(project_root: Path) -> None:
 
 def _git_init(project_root: Path) -> None:
     """Initialize a single git repo at the project root."""
+    # Provide author identity via env so git commit never prompts.
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "forge",
+        "GIT_AUTHOR_EMAIL": "forge@localhost",
+        "GIT_COMMITTER_NAME": "forge",
+        "GIT_COMMITTER_EMAIL": "forge@localhost",
+    }
     subprocess.run(
         ["git", "init"],
         cwd=str(project_root),
         capture_output=True,
+        timeout=30,
     )
     subprocess.run(
         ["git", "add", "."],
         cwd=str(project_root),
         capture_output=True,
+        timeout=30,
     )
     subprocess.run(
         ["git", "commit", "-m", "Initial commit from forge"],
         cwd=str(project_root),
         capture_output=True,
+        timeout=30,
+        env=env,
     )

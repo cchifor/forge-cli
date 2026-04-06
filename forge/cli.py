@@ -95,6 +95,13 @@ def _is_headless(args: argparse.Namespace) -> bool:
         or args.project_name is not None
         or args.frontend is not None
         or args.yes
+        or args.quiet
+        or getattr(args, "json_output", False)
+        or args.no_docker
+        or args.backend_port is not None
+        or args.python_version is not None
+        or args.features is not None
+        or args.description is not None
     )
 
 
@@ -108,21 +115,24 @@ def _load_config_file(path_str: str) -> dict[str, Any]:
     except ImportError:
         has_yaml = False
 
-    if path_str == "-":
-        raw = sys.stdin.read()
-        if has_yaml:
+    try:
+        if path_str == "-":
+            raw = sys.stdin.read()
+        else:
+            p = Path(path_str)
+            if not p.exists():
+                raise FileNotFoundError(f"Config file not found: {p}")
+            raw = p.read_text(encoding="utf-8")
+
+        if not raw.strip():
+            return {}
+
+        is_yaml = path_str == "-" or Path(path_str).suffix in (".yml", ".yaml")
+        if is_yaml and has_yaml:
             return yaml.safe_load(raw) or {}
         return json.loads(raw)
-
-    p = Path(path_str)
-    if not p.exists():
-        print(f"  Error: config file not found: {p}")
-        sys.exit(2)
-
-    text = p.read_text(encoding="utf-8")
-    if p.suffix in (".yml", ".yaml") and has_yaml:
-        return yaml.safe_load(text) or {}
-    return json.loads(text)
+    except Exception as e:
+        raise ValueError(f"Failed to load config: {e}") from e
 
 
 # -- Build config from args/file ---------------------------------------------
@@ -267,6 +277,15 @@ def _ask_port(message: str, default: str) -> int:
 # -- Interactive flow ---------------------------------------------------------
 
 def _collect_inputs() -> ProjectConfig | None:
+    # Fail fast if no terminal is available
+    if not sys.stdin.isatty():
+        print(
+            "Error: Interactive mode requires a terminal.\n"
+            "Use --config, --yes, or --json for headless mode.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     print()
     print("  +===================================+")
     print("  |             forge                  |")
@@ -429,20 +448,41 @@ def _print_summary(config: ProjectConfig) -> None:
 
 # -- Entry point --------------------------------------------------------------
 
+def _json_error(stdout_fd, message: str) -> None:
+    """Write a JSON error object to the real stdout and exit."""
+    stdout_fd.write(json.dumps({"error": message}) + "\n")
+    stdout_fd.flush()
+    sys.exit(2)
+
+
 def main() -> None:
     args = _parse_args()
 
+    # When --json is set, redirect all print() to stderr so stdout is clean JSON
+    _real_stdout = sys.stdout
+    if getattr(args, "json_output", False):
+        sys.stdout = sys.stderr
+
     if _is_headless(args):
         # Headless mode: build config from file + flags
-        cfg = _load_config_file(args.config) if args.config else {}
+        try:
+            cfg = _load_config_file(args.config) if args.config else {}
+        except ValueError as e:
+            if getattr(args, "json_output", False):
+                _json_error(_real_stdout, str(e))
+            print(f"  Configuration error: {e}", file=sys.stderr)
+            sys.exit(2)
+
         try:
             config = _build_config(args, cfg)
             config.validate()
-        except (ValueError, KeyError, json.JSONDecodeError) as e:
-            print(f"  Configuration error: {e}")
+        except (ValueError, KeyError) as e:
+            if getattr(args, "json_output", False):
+                _json_error(_real_stdout, str(e))
+            print(f"  Configuration error: {e}", file=sys.stderr)
             sys.exit(2)
 
-        if not getattr(args, "quiet", False) and not getattr(args, "json_output", False):
+        if not args.quiet and not getattr(args, "json_output", False):
             _print_summary(config)
 
         if not args.yes:
@@ -456,7 +496,7 @@ def main() -> None:
             print("\n  Aborted.")
             sys.exit(0)
 
-    quiet = getattr(args, "quiet", False) or getattr(args, "json_output", False)
+    quiet = args.quiet or getattr(args, "json_output", False)
 
     if not quiet:
         print()
@@ -470,7 +510,8 @@ def main() -> None:
             result["frontend_dir"] = str(project_root / config.frontend_slug)
             result["framework"] = config.frontend.framework.value
             result["features"] = config.frontend.features
-        print(json.dumps(result))
+        _real_stdout.write(json.dumps(result) + "\n")
+        _real_stdout.flush()
     else:
         if not quiet:
             print(f"\n  Project generated at: {project_root}")

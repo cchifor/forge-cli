@@ -5,17 +5,19 @@ import { Home, Package, User, Settings } from 'lucide-vue-next'
 import AppSidebar from '@/shared/components/AppSidebar.vue'
 import AppHeader from '@/shared/components/AppHeader.vue'
 import VerticalSplitter from '@/shared/components/VerticalSplitter.vue'
-import { AiChat } from '@/features/ai_chat'
-import { useAiChat } from '@/features/ai_chat'
+import { AiChat, WorkspacePane } from '@/features/ai_chat'
+import { useAiChat, useWorkspace } from '@/features/ai_chat'
 import { useBreakpoint } from '@/shared/composables/useBreakpoint'
 import { useUiStore } from '@/shared/stores/ui.store'
 
 const route = useRoute()
 const router = useRouter()
 const { chatOpen, closeChat } = useAiChat()
+const workspace = useWorkspace()
 const { isCompact, isMedium, isExpanded, width: viewportWidth } = useBreakpoint()
 const uiStore = useUiStore()
 const isDragging = ref(false)
+const showWorkspace = computed(() => chatOpen.value && workspace.hasActivity.value)
 
 const sidebarWidth = computed(() => {
   if (isCompact.value) return 0
@@ -75,7 +77,8 @@ function isNavActive(url: string) {
     >
       <AppHeader />
       <main class="flex-1 overflow-auto p-4">
-        <RouterView />
+        <RouterView v-show="!showWorkspace" />
+        <WorkspacePane v-if="showWorkspace" />
       </main>
     </div>
     <template v-if="chatOpen">
