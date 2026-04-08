@@ -127,7 +127,7 @@ class TestProjectConfig:
     def _make_config(self, **overrides):
         defaults = dict(
             project_name="My Platform",
-            backend=BackendConfig(project_name="My Platform"),
+            backends=[BackendConfig(project_name="My Platform")],
             frontend=FrontendConfig(
                 framework=FrontendFramework.VUE,
                 project_name="My Platform",
@@ -142,7 +142,7 @@ class TestProjectConfig:
 
     def test_port_collision(self):
         cfg = self._make_config(
-            backend=BackendConfig(project_name="Test", server_port=5173),
+            backends=[BackendConfig(project_name="Test", server_port=5173)],
             frontend=FrontendConfig(
                 framework=FrontendFramework.VUE,
                 project_name="Test",
@@ -166,7 +166,7 @@ class TestProjectConfig:
     def test_flutter_excluded_from_port_check(self):
         """Flutter doesn't use host ports in Docker, so no collision."""
         cfg = self._make_config(
-            backend=BackendConfig(project_name="Test", server_port=5000),
+            backends=[BackendConfig(project_name="Test", server_port=5000)],
             frontend=FrontendConfig(
                 framework=FrontendFramework.FLUTTER,
                 project_name="Test",

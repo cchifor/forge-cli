@@ -145,7 +145,7 @@ class TestPrintSummary:
     def test_backend_only(self):
         config = ProjectConfig(
             project_name="My App",
-            backend=BackendConfig(project_name="My App", server_port=5000),
+            backends=[BackendConfig(project_name="My App", server_port=5000)],
         )
         out = self._capture(config)
         assert "My App" in out
@@ -157,7 +157,7 @@ class TestPrintSummary:
     def test_with_vue_frontend(self):
         config = ProjectConfig(
             project_name="Shop",
-            backend=BackendConfig(project_name="Shop", server_port=8000),
+            backends=[BackendConfig(project_name="Shop", server_port=8000)],
             frontend=FrontendConfig(
                 framework=FrontendFramework.VUE,
                 project_name="Shop",
@@ -173,7 +173,7 @@ class TestPrintSummary:
     def test_with_flutter_frontend(self):
         config = ProjectConfig(
             project_name="App",
-            backend=BackendConfig(project_name="App"),
+            backends=[BackendConfig(project_name="App")],
             frontend=FrontendConfig(
                 framework=FrontendFramework.FLUTTER,
                 project_name="App",
@@ -189,7 +189,7 @@ class TestPrintSummary:
     def test_with_keycloak(self):
         config = ProjectConfig(
             project_name="App",
-            backend=BackendConfig(project_name="App"),
+            backends=[BackendConfig(project_name="App")],
             include_keycloak=True,
             keycloak_port=9090,
         )

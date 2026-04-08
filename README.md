@@ -6,9 +6,9 @@
 
 [Quick Start](#quick-start) · [Features](#features) · [Usage](#usage-examples) · [Architecture](#architecture) · [Contributing](#contributing)
 
-[![version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/cchifor/forge) [![python](https://img.shields.io/badge/python-%3E%3D3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org) [![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE) [![platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey?style=flat-square)](https://github.com/cchifor/forge) [![tests](https://img.shields.io/badge/tests-137%20passed-brightgreen?style=flat-square)](https://github.com/cchifor/forge)
+[![version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/cchifor/forge) [![python](https://img.shields.io/badge/python-%3E%3D3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org) [![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE) [![platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey?style=flat-square)](https://github.com/cchifor/forge) [![tests](https://img.shields.io/badge/tests-136%20passed-brightgreen?style=flat-square)](https://github.com/cchifor/forge)
 
-**3 Backend Languages** *(Python/FastAPI, Node.js/Fastify, Rust/Axum)*
+**3 Backend Languages** *(Python/FastAPI, Node.js/Fastify, Rust/Axum — mix multiple per project)*
 **3 Frontend Frameworks** *(Vue 3, Svelte 5, Flutter)*
 **Agentic UI** *(AG-UI protocol, MCP ext-apps, dual-engine workspace)*
 **Enterprise Auth** *(Keycloak, Gatekeeper OIDC, Traefik, Redis)*
@@ -38,7 +38,7 @@
 
 | Category | What you get |
 |----------|-------------|
-| **Backend Choice** | Python ([FastAPI](https://fastapi.tiangolo.com) + SQLAlchemy + Alembic), Node.js ([Fastify 5](https://fastify.dev) + Prisma 6 + Zod), or Rust ([Axum 0.8](https://github.com/tokio-rs/axum) + SQLx + serde). All three produce the same REST API contract. |
+| **Backend Choice** | Python ([FastAPI](https://fastapi.tiangolo.com) + SQLAlchemy + Alembic), Node.js ([Fastify 5](https://fastify.dev) + Prisma 6 + Zod), or Rust ([Axum 0.8](https://github.com/tokio-rs/axum) + SQLx + serde). All three produce the same REST API contract. **Multi-backend**: generate multiple backends per project (e.g., a Python API gateway + a Rust data processor + a Node.js notification service), each with its own name, language, port, and Docker Compose service. |
 | **Frontend Choice** | [Vue 3](https://vuejs.org), [Svelte 5](https://svelte.dev), [Flutter](https://flutter.dev) (web), or none. Each includes TanStack Query / Zod / Vite and a responsive dashboard with health checks. |
 | **Full CRUD Generation** | Name your entities (e.g., `products, orders`) and forge generates domain models, ORM models, repositories, services, REST endpoints, API clients, UI pages, schemas, MSW handlers, and tests — for every entity, in every layer. |
 | **Agentic UI** | Vue template includes a split-pane workspace with [AG-UI protocol](https://github.com/ag-ui-protocol/ag-ui) (SSE streaming) and [MCP ext-apps](https://github.com/anthropics/ext-apps) (sandboxed iframes). Dual-engine rendering for trusted Vue components and third-party extensions. |
@@ -108,7 +108,7 @@ forge --config stack.yaml --yes --no-docker
 ```
 
 ```yaml
-# stack.yaml
+# stack.yaml — single backend
 project_name: my-shop
 description: An e-commerce platform
 
@@ -130,6 +130,30 @@ keycloak:
   realm: my-shop
   client_id: my-shop
 ```
+
+**Multi-backend config file:**
+
+```yaml
+# microservices.yaml — multiple backends in one project
+project_name: my-platform
+
+backends:
+  - name: api-gateway
+    language: python
+    server_port: 5000
+  - name: data-processor
+    language: rust
+    server_port: 5001
+  - name: notifications
+    language: node
+    server_port: 5002
+
+frontend:
+  framework: vue
+  features: products, orders
+```
+
+Each backend gets its own directory, Dockerfile, Docker Compose service, and database. The frontend proxies `/api` to the first backend.
 
 **From CLI flags (no file needed):**
 
@@ -162,7 +186,7 @@ echo '{"project_name":"my-api","backend":{"language":"node"}}' \
 
 Expected output (stdout only — all progress goes to stderr):
 ```json
-{"project_root": "/path/to/my_api", "backend_dir": "/path/to/my_api/backend"}
+{"project_root": "/path/to/my_api", "backends": [{"name": "backend", "dir": "/path/to/my_api/backend", "language": "node", "port": 5000}], "backend_dir": "/path/to/my_api/backend"}
 ```
 
 On error, `--json` returns a structured error object (exit code 2):
@@ -249,6 +273,7 @@ User message → useAiChat → useAgentClient → HTTP POST (SSE stream)
 | `--description DESC` | Project description | `A full-stack application` |
 | `--output-dir DIR` | Output directory | `.` |
 | `--backend-language LANG` | `python`, `node`, or `rust` | `python` |
+| `--backend-name NAME` | Service name for the backend | `backend` |
 | `--backend-port PORT` | Backend server port | `5000` |
 | `--python-version VER` | `3.13`, `3.12`, or `3.11` | `3.13` |
 | `--node-version VER` | `22` or `24` | `22` |

@@ -19,7 +19,7 @@ class TestDockerComposeConfig:
         config = ProjectConfig(
             project_name="smoke-test",
             output_dir=str(tmp_path),
-            backend=BackendConfig(project_name="smoke-test", server_port=5000),
+            backends=[BackendConfig(project_name="smoke-test", server_port=5000)],
         )
         project_root = generate(config, quiet=True)
         result = subprocess.run(
@@ -35,7 +35,7 @@ class TestDockerComposeConfig:
         config = ProjectConfig(
             project_name="smoke-test",
             output_dir=str(tmp_path),
-            backend=BackendConfig(project_name="smoke-test", server_port=5000),
+            backends=[BackendConfig(project_name="smoke-test", server_port=5000)],
             frontend=FrontendConfig(
                 framework=FrontendFramework.VUE,
                 project_name="smoke-test",
@@ -57,7 +57,7 @@ class TestDockerComposeConfig:
         config = ProjectConfig(
             project_name="smoke-test",
             output_dir=str(tmp_path),
-            backend=BackendConfig(project_name="smoke-test", server_port=5000),
+            backends=[BackendConfig(project_name="smoke-test", server_port=5000)],
             include_keycloak=True,
             keycloak_port=8080,
         )

@@ -49,6 +49,8 @@ def _parse_args() -> argparse.Namespace:
     # Backend
     p.add_argument("--backend-language", choices=["python", "node", "rust"],
                     help="Backend language: python (FastAPI), node (Fastify), or rust (Axum)")
+    p.add_argument("--backend-name", metavar="NAME",
+                    help="Backend service name (default: backend)")
     p.add_argument("--backend-port", type=int, metavar="PORT")
     p.add_argument("--python-version", choices=["3.13", "3.12", "3.11"])
     p.add_argument("--node-version", choices=["22", "24"])
@@ -162,19 +164,39 @@ def _build_config(args: argparse.Namespace, cfg: dict) -> ProjectConfig:
     description = _get(args, "description", cfg, "description", default="A full-stack application")
     output_dir = args.output_dir
 
-    # Backend
-    lang_str = _get(args, "backend_language", cfg, "backend", "language", default="python")
-    backend_language = BackendLanguage(lang_str) if lang_str in ("python", "node", "rust") else BackendLanguage.PYTHON
+    # Backends — support both "backend:" (single) and "backends:" (list)
+    backends: list[BackendConfig] = []
+    backends_raw = cfg.get("backends") if isinstance(cfg, dict) else None
 
-    backend = BackendConfig(
-        project_name=project_name,
-        language=backend_language,
-        description=description,
-        python_version=_get(args, "python_version", cfg, "backend", "python_version", default="3.13"),
-        node_version=_get(args, "node_version", cfg, "backend", "node_version", default="22"),
-        rust_edition=_get(args, "rust_edition", cfg, "backend", "rust_edition", default="2024"),
-        server_port=_get(args, "backend_port", cfg, "backend", "server_port", default=5000),
-    )
+    if backends_raw and isinstance(backends_raw, list):
+        # Multi-backend from config file
+        for i, be_cfg in enumerate(backends_raw):
+            lang = be_cfg.get("language", "python")
+            backends.append(BackendConfig(
+                name=be_cfg.get("name", f"backend-{i}"),
+                project_name=project_name,
+                language=BackendLanguage(lang) if lang in ("python", "node", "rust") else BackendLanguage.PYTHON,
+                description=be_cfg.get("description", description),
+                python_version=be_cfg.get("python_version", "3.13"),
+                node_version=be_cfg.get("node_version", "22"),
+                rust_edition=be_cfg.get("rust_edition", "2024"),
+                server_port=be_cfg.get("server_port", 5000 + i),
+            ))
+    else:
+        # Single backend (backward compat)
+        lang_str = _get(args, "backend_language", cfg, "backend", "language", default="python")
+        backend_language = BackendLanguage(lang_str) if lang_str in ("python", "node", "rust") else BackendLanguage.PYTHON
+        backend_name = _get(args, "backend_name", cfg, "backend", "name", default="backend")
+        backends.append(BackendConfig(
+            name=backend_name,
+            project_name=project_name,
+            language=backend_language,
+            description=description,
+            python_version=_get(args, "python_version", cfg, "backend", "python_version", default="3.13"),
+            node_version=_get(args, "node_version", cfg, "backend", "node_version", default="22"),
+            rust_edition=_get(args, "rust_edition", cfg, "backend", "rust_edition", default="2024"),
+            server_port=_get(args, "backend_port", cfg, "backend", "server_port", default=5000),
+        ))
 
     # Frontend
     fw_str = _get(args, "frontend", cfg, "frontend", "framework", default="none")
@@ -224,7 +246,7 @@ def _build_config(args: argparse.Namespace, cfg: dict) -> ProjectConfig:
     return ProjectConfig(
         project_name=project_name,
         output_dir=str(output_dir),
-        backend=backend,
+        backends=backends,
         frontend=frontend,
         include_keycloak=include_keycloak,
         keycloak_port=keycloak_port,
@@ -311,7 +333,8 @@ def _collect_inputs() -> ProjectConfig | None:
     description = _ask_text("Description:", default="A full-stack application")
 
     print()
-    print("  -- Backend --")
+    print("  -- Backend 1 --")
+    backend_name = _ask_text("Backend name:", default="backend")
     backend_lang_choice = _ask_select(
         "Backend language:",
         choices=["Python (FastAPI)", "Node.js (Fastify)", "Rust (Axum)"],
@@ -341,7 +364,9 @@ def _collect_inputs() -> ProjectConfig | None:
             "Rust edition:", choices=["2024", "2021"]
         )
 
-    backend = BackendConfig(
+    backends: list[BackendConfig] = []
+    backends.append(BackendConfig(
+        name=backend_name,
         project_name=project_name,
         language=backend_language,
         description=description,
@@ -349,7 +374,31 @@ def _collect_inputs() -> ProjectConfig | None:
         node_version=node_version,
         rust_edition=rust_edition,
         server_port=backend_port,
-    )
+    ))
+
+    # Ask for additional backends
+    while _ask_confirm("Add another backend?", default=False):
+        print()
+        print(f"  -- Backend {len(backends) + 1} --")
+        be_name = _ask_text("Backend name:", default=f"backend-{len(backends)}")
+        be_lang_choice = _ask_select(
+            "Backend language:",
+            choices=["Python (FastAPI)", "Node.js (Fastify)", "Rust (Axum)"],
+        )
+        if "Node" in be_lang_choice:
+            be_lang = BackendLanguage.NODE
+        elif "Rust" in be_lang_choice:
+            be_lang = BackendLanguage.RUST
+        else:
+            be_lang = BackendLanguage.PYTHON
+        be_port = _ask_port("Server port:", default=str(5000 + len(backends)))
+        backends.append(BackendConfig(
+            name=be_name,
+            project_name=project_name,
+            language=be_lang,
+            description=description,
+            server_port=be_port,
+        ))
 
     print()
     print("  -- Frontend --")
@@ -448,7 +497,7 @@ def _collect_inputs() -> ProjectConfig | None:
 
     config = ProjectConfig(
         project_name=project_name,
-        backend=backend,
+        backends=backends,
         frontend=frontend,
         include_keycloak=include_keycloak,
         keycloak_port=keycloak_port,
@@ -548,8 +597,13 @@ def main() -> None:
 
     if getattr(args, "json_output", False):
         result = {"project_root": str(project_root)}
-        if config.backend:
-            result["backend_dir"] = str(project_root / config.backend_slug)
+        if config.backends:
+            result["backends"] = [
+                {"name": bc.name, "dir": str(project_root / bc.name), "language": bc.language.value, "port": bc.server_port}
+                for bc in config.backends
+            ]
+            # Backward compat: single backend_dir for first backend
+            result["backend_dir"] = str(project_root / config.backends[0].name)
         if config.frontend and config.frontend.framework != FrontendFramework.NONE:
             result["frontend_dir"] = str(project_root / config.frontend_slug)
             result["framework"] = config.frontend.framework.value

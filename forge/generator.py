@@ -39,25 +39,23 @@ def generate(config: ProjectConfig, quiet: bool = False) -> Path:
         if not quiet:
             print(msg)
 
-    # 1. Generate backend
-    if config.backend:
-        if config.backend.language == BackendLanguage.NODE:
-            _log("  Generating Node.js backend ...")
-            backend_dir = _generate_node_backend(config, project_root, quiet=quiet)
+    # 1. Generate backends
+    for bc in config.backends:
+        backend_dir = project_root / bc.name
+        if bc.language == BackendLanguage.NODE:
+            _log(f"  Generating Node.js backend '{bc.name}' ...")
+            _generate_single_backend(bc, "node-service-template", backend_dir, quiet)
             if not quiet:
-                print("  Setting up Node.js backend ...")
                 _setup_node_backend(backend_dir)
-        elif config.backend.language == BackendLanguage.RUST:
-            _log("  Generating Rust backend ...")
-            backend_dir = _generate_rust_backend(config, project_root, quiet=quiet)
+        elif bc.language == BackendLanguage.RUST:
+            _log(f"  Generating Rust backend '{bc.name}' ...")
+            _generate_single_backend(bc, "rust-service-template", backend_dir, quiet)
             if not quiet:
-                print("  Setting up Rust backend ...")
                 _setup_rust_backend(backend_dir)
         else:
-            _log("  Generating Python backend ...")
-            backend_dir = _generate_backend(config, project_root, quiet=quiet)
+            _log(f"  Generating Python backend '{bc.name}' ...")
+            _generate_single_backend(bc, "python-service-template", backend_dir, quiet)
             if not quiet:
-                print("  Setting up backend ...")
                 _setup_backend(backend_dir)
 
     # 2. Generate frontend
@@ -66,7 +64,7 @@ def generate(config: ProjectConfig, quiet: bool = False) -> Path:
         _generate_frontend(config, project_root, quiet=quiet)
 
     # 3. Render Docker Compose
-    if config.backend:
+    if config.backends:
         _log("  Rendering docker-compose.yml ...")
         render_compose(config, project_root)
         # Copy auth infrastructure if Keycloak is enabled
@@ -159,51 +157,19 @@ def _generate_e2e_tests(config: ProjectConfig, project_root: Path) -> None:
         test_path.write_text(test_content, encoding="utf-8")
 
 
-def _generate_backend(config: ProjectConfig, project_root: Path, quiet: bool = False) -> Path:
-    """Generate backend using Copier (_subdirectory: template)."""
-    ctx = variable_mapper.backend_context(config)
-    dst = project_root / config.backend_slug
+def _generate_single_backend(bc: BackendConfig, template_name: str, dst: Path, quiet: bool = False) -> Path:
+    """Generate a single backend using Copier."""
+    from forge.config import BackendLanguage
+    ctx_fn = {
+        BackendLanguage.PYTHON: variable_mapper.backend_context,
+        BackendLanguage.NODE: variable_mapper.node_backend_context,
+        BackendLanguage.RUST: variable_mapper.rust_backend_context,
+    }
+    ctx = ctx_fn[bc.language](bc)
     dst.mkdir(exist_ok=True)
-    run_copy(
-        src_path=str(TEMPLATES_DIR / TEMPLATE_DIRS["backend"]),
-        dst_path=str(dst),
-        data=ctx,
-        unsafe=True,
-        defaults=True,
-        overwrite=True,
-        quiet=quiet,
-    )
-    return dst
-
-
-def _generate_node_backend(config: ProjectConfig, project_root: Path, quiet: bool = False) -> Path:
-    """Generate Node.js backend using Copier."""
-    ctx = variable_mapper.node_backend_context(config)
-    dst = project_root / config.backend_slug
-    dst.mkdir(exist_ok=True)
-    template_path = TEMPLATES_DIR / "node-service-template"
+    template_path = TEMPLATES_DIR / template_name
     if not template_path.exists():
-        raise FileNotFoundError(f"Node.js template not found at {template_path}")
-    run_copy(
-        src_path=str(template_path),
-        dst_path=str(dst),
-        data=ctx,
-        unsafe=True,
-        defaults=True,
-        overwrite=True,
-        quiet=quiet,
-    )
-    return dst
-
-
-def _generate_rust_backend(config: ProjectConfig, project_root: Path, quiet: bool = False) -> Path:
-    """Generate Rust backend using Copier."""
-    ctx = variable_mapper.rust_backend_context(config)
-    dst = project_root / config.backend_slug
-    dst.mkdir(exist_ok=True)
-    template_path = TEMPLATES_DIR / "rust-service-template"
-    if not template_path.exists():
-        raise FileNotFoundError(f"Rust template not found at {template_path}")
+        raise FileNotFoundError(f"Template not found: {template_path}")
     run_copy(
         src_path=str(template_path),
         dst_path=str(dst),

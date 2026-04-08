@@ -55,7 +55,8 @@ def validate_features(features: list[str]) -> None:
 @dataclass
 class BackendConfig:
     """Backend service configuration."""
-    project_name: str
+    name: str = "backend"
+    project_name: str = ""
     language: BackendLanguage = BackendLanguage.PYTHON
     description: str = "A microservice"
     python_version: str = "3.13"
@@ -64,7 +65,11 @@ class BackendConfig:
     server_port: int = 5000
 
     def validate(self) -> None:
-        validate_port(self.server_port, "Backend port")
+        validate_port(self.server_port, f"Backend '{self.name}' port")
+        if not re.match(r"^[a-z][a-z0-9_-]*$", self.name):
+            raise ValueError(
+                f"Backend name '{self.name}' must be lowercase kebab/snake case."
+            )
 
 
 @dataclass
@@ -116,16 +121,32 @@ class FrontendConfig:
 class ProjectConfig:
     project_name: str
     output_dir: str = "."
-    backend: Optional[BackendConfig] = None
+    backends: list[BackendConfig] = field(default_factory=list)
     frontend: Optional[FrontendConfig] = None
     include_keycloak: bool = False
     keycloak_port: int = 8080
 
+    # Backward compatibility: single backend access
+    @property
+    def backend(self) -> Optional[BackendConfig]:
+        """Return the first backend, or None. For backward compatibility."""
+        return self.backends[0] if self.backends else None
+
+    @backend.setter
+    def backend(self, value: Optional[BackendConfig]) -> None:
+        """Set a single backend. For backward compatibility."""
+        if value is None:
+            self.backends = []
+        elif self.backends:
+            self.backends[0] = value
+        else:
+            self.backends.append(value)
+
     def validate(self) -> None:
         if not self.project_name.strip():
             raise ValueError("Project name cannot be empty.")
-        if self.backend:
-            self.backend.validate()
+        for bc in self.backends:
+            bc.validate()
         if self.frontend:
             self.frontend.validate()
         if self.include_keycloak:
@@ -133,8 +154,12 @@ class ProjectConfig:
 
         # Check for port collisions on host-mapped ports
         ports: dict[int, str] = {}
-        if self.backend:
-            ports[self.backend.server_port] = "backend"
+        for bc in self.backends:
+            if bc.server_port in ports:
+                raise ValueError(
+                    f"Port {bc.server_port} is used by both '{bc.name}' and '{ports[bc.server_port]}'."
+                )
+            ports[bc.server_port] = bc.name
         if self.frontend and self.frontend.framework != FrontendFramework.NONE:
             if self.frontend.framework != FrontendFramework.FLUTTER:
                 p = self.frontend.server_port
@@ -150,7 +175,6 @@ class ProjectConfig:
             )
         ports[db_port] = "postgres"
         if self.include_keycloak:
-            # Traefik dashboard uses port 8888
             traefik_dashboard_port = 8888
             if traefik_dashboard_port in ports:
                 raise ValueError(
@@ -164,14 +188,19 @@ class ProjectConfig:
                     f"with {ports[self.keycloak_port]}."
                 )
 
+    # Check for duplicate backend names
+        names = [bc.name for bc in self.backends]
+        if len(names) != len(set(names)):
+            raise ValueError("Backend names must be unique.")
+
     @property
     def project_slug(self) -> str:
         return self.project_name.lower().replace(" ", "_").replace("-", "_")
 
     @property
     def backend_slug(self) -> str:
-        """Fixed directory name for the generated backend service."""
-        return "backend"
+        """Directory name for the first (or only) backend. Backward compat."""
+        return self.backends[0].name if self.backends else "backend"
 
     @property
     def frontend_slug(self) -> str:

@@ -4,47 +4,38 @@ from __future__ import annotations
 
 from typing import Any
 
-from forge.config import FrontendFramework, ProjectConfig
+from forge.config import BackendConfig, FrontendFramework, ProjectConfig
 
 
-def backend_context(config: ProjectConfig) -> dict[str, Any]:
+def backend_context(bc: BackendConfig) -> dict[str, Any]:
     """Build data dict for the python-service-template (Copier)."""
-    bc = config.backend
-    if bc is None:
-        raise ValueError("Backend config is required.")
     return {
-        "project_name": config.backend_slug,
+        "project_name": bc.name,
         "project_description": bc.description,
         "server_port": bc.server_port,
-        "db_name": config.backend_slug,
+        "db_name": bc.name.replace("-", "_"),
         "python_version": bc.python_version,
     }
 
 
-def rust_backend_context(config: ProjectConfig) -> dict[str, Any]:
+def rust_backend_context(bc: BackendConfig) -> dict[str, Any]:
     """Build data dict for the rust-service-template (Copier)."""
-    bc = config.backend
-    if bc is None:
-        raise ValueError("Backend config is required.")
     return {
-        "project_name": config.backend_slug,
+        "project_name": bc.name,
         "project_description": bc.description,
         "server_port": bc.server_port,
-        "db_name": config.backend_slug,
+        "db_name": bc.name.replace("-", "_"),
         "rust_edition": bc.rust_edition,
     }
 
 
-def node_backend_context(config: ProjectConfig) -> dict[str, Any]:
+def node_backend_context(bc: BackendConfig) -> dict[str, Any]:
     """Build data dict for the node-service-template (Copier)."""
-    bc = config.backend
-    if bc is None:
-        raise ValueError("Backend config is required.")
     return {
-        "project_name": config.backend_slug,
+        "project_name": bc.name,
         "project_description": bc.description,
         "server_port": bc.server_port,
-        "db_name": config.backend_slug,
+        "db_name": bc.name.replace("-", "_"),
         "node_version": bc.node_version,
     }
 
@@ -56,6 +47,7 @@ def vue_context(config: ProjectConfig) -> dict[str, Any]:
         raise ValueError("Vue frontend config is required.")
     bc = config.backend
     backend_port = bc.server_port if bc else 5000
+    backend_name = bc.name if bc else "backend"
     return {
         "project_name": fc.project_name,
         "project_slug": config.frontend_slug,
@@ -68,7 +60,7 @@ def vue_context(config: ProjectConfig) -> dict[str, Any]:
         "include_chat": fc.include_chat,
         "include_openapi": fc.include_openapi,
         "api_base_url": f"http://localhost:{fc.server_port}",
-        "api_proxy_target": f"http://backend:{backend_port}",
+        "api_proxy_target": f"http://{backend_name}:{backend_port}",
         "server_port": fc.server_port,
         "keycloak_url": fc.keycloak_url,
         "keycloak_realm": fc.keycloak_realm,
@@ -84,6 +76,7 @@ def svelte_context(config: ProjectConfig) -> dict[str, Any]:
         raise ValueError("Svelte frontend config is required.")
     bc = config.backend
     backend_port = bc.server_port if bc else 5000
+    backend_name = bc.name if bc else "backend"
     return {
         "project_name": fc.project_name,
         "project_slug": config.frontend_slug,
@@ -94,7 +87,7 @@ def svelte_context(config: ProjectConfig) -> dict[str, Any]:
         "include_auth": fc.include_auth,
         "include_chat": fc.include_chat,
         "package_manager": fc.package_manager,
-        "api_base_url": f"http://backend:{backend_port}",
+        "api_base_url": f"http://{backend_name}:{backend_port}",
         "server_port": fc.server_port,
         "keycloak_url": fc.keycloak_url,
         "keycloak_realm": fc.keycloak_realm,

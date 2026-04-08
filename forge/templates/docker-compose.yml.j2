@@ -1,13 +1,14 @@
 services:
-{% if backend_language == "python" %}
-  # ── Migrations (runs once before backend starts) ──
-  migrate:
+{% for be in backends %}
+{% if be.language == "python" %}
+  # ── Migrations for {{ be.name }} ──
+  {{ be.name }}-migrate:
     build:
-      context: ./{{ backend_slug }}
+      context: ./{{ be.name }}
       dockerfile: Dockerfile
     environment:
       ENV: development
-      APP__DB__URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/{{ db_name }}"
+      APP__DB__URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/{{ be.db_name }}"
     command: ["python", "-m", "app", "db", "upgrade"]
     depends_on:
       postgres:
@@ -16,22 +17,22 @@ services:
       - app-network
 {% endif %}
 
-  # ── Backend ──
-  backend:
+  # ── {{ be.name }} ──
+  {{ be.name }}:
     build:
-      context: ./{{ backend_slug }}
+      context: ./{{ be.name }}
       dockerfile: Dockerfile
     ports:
-      - "{{ backend_port }}:{{ backend_port }}"
+      - "{{ be.port }}:{{ be.port }}"
     environment:
-{% if backend_language == "python" %}
+{% if be.language == "python" %}
       ENV: development
-      APP__DB__URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/{{ db_name }}"
-{% elif backend_language == "node" %}
+      APP__DB__URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/{{ be.db_name }}"
+{% elif be.language == "node" %}
       NODE_ENV: development
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ db_name }}"
-{% elif backend_language == "rust" %}
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ db_name }}"
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ be.db_name }}"
+{% elif be.language == "rust" %}
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ be.db_name }}"
       RUST_LOG: info
 {% endif %}
 {% if include_keycloak %}
@@ -45,13 +46,13 @@ services:
 {% if include_keycloak %}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
-      - "traefik.http.routers.backend.middlewares=auth"
-      - "traefik.http.services.backend.loadbalancer.server.port={{ backend_port }}"
+      - "traefik.http.routers.{{ be.name }}.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.{{ be.name }}.middlewares=auth"
+      - "traefik.http.services.{{ be.name }}.loadbalancer.server.port={{ be.port }}"
 {% endif %}
     depends_on:
-{% if backend_language == "python" %}
-      migrate:
+{% if be.language == "python" %}
+      {{ be.name }}-migrate:
         condition: service_completed_successfully
 {% else %}
       postgres:
@@ -63,6 +64,7 @@ services:
 {% endif %}
     networks:
       - app-network
+{% endfor %}
 
   # ── Database ──
   postgres:
@@ -102,7 +104,9 @@ services:
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
 {% endif %}
     depends_on:
-      - backend
+{% for be in backends %}
+      - {{ be.name }}
+{% endfor %}
     networks:
       - app-network
 {% endif %}

@@ -39,11 +39,25 @@ def render_compose(config: ProjectConfig, project_root: Path) -> Path:
         and config.frontend.framework != FrontendFramework.NONE
     )
 
+    # Build per-backend context list for the template loop
+    backends_ctx = []
+    for bc in config.backends:
+        backends_ctx.append({
+            "name": bc.name,
+            "language": bc.language.value,
+            "port": bc.server_port,
+            "db_name": bc.name.replace("-", "_"),
+        })
+
+    # Primary backend (first) for backward-compat references
+    primary = config.backend
+
     context = {
-        "backend_language": config.backend.language.value if config.backend else "python",
+        "backends": backends_ctx,
+        "backend_language": primary.language.value if primary else "python",
         "backend_slug": config.backend_slug,
-        "backend_port": config.backend.server_port if config.backend else 5000,
-        "db_name": config.backend_slug,
+        "backend_port": primary.server_port if primary else 5000,
+        "db_name": config.backend_slug.replace("-", "_"),
         "has_frontend": has_frontend,
         "frontend_slug": config.frontend_slug if has_frontend else "",
         "frontend_port": (

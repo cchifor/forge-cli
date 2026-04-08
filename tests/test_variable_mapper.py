@@ -45,7 +45,7 @@ def _make_config(framework=FrontendFramework.VUE, **fe_overrides):
     fc = FrontendConfig(**fe_defaults)
     return ProjectConfig(
         project_name="Test App",
-        backend=bc,
+        backends=[bc],
         frontend=fc,
         include_keycloak=True,
         keycloak_port=8080,
@@ -55,7 +55,7 @@ def _make_config(framework=FrontendFramework.VUE, **fe_overrides):
 class TestBackendContext:
     def test_maps_all_fields(self):
         config = _make_config()
-        ctx = backend_context(config)
+        ctx = backend_context(config.backend)
         assert ctx["project_name"] == "backend"
         assert ctx["project_description"] == "A test service"
         assert ctx["server_port"] == 5000
@@ -66,17 +66,11 @@ class TestBackendContext:
     def test_minimal_schema(self):
         """Backend context should only have the 5 fields from copier.yml."""
         config = _make_config()
-        ctx = backend_context(config)
+        ctx = backend_context(config.backend)
         assert set(ctx.keys()) == {
             "project_name", "project_description", "server_port",
             "db_name", "python_version",
         }
-
-    def test_no_backend_raises(self):
-        config = _make_config()
-        config.backend = None
-        with pytest.raises(ValueError):
-            backend_context(config)
 
 
 class TestVueContext:
