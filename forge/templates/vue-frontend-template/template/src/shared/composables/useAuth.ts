@@ -71,7 +71,8 @@ export function useAuth() {
       const authenticated = await keycloakInstance.init({
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-        pkceMethod: 'S256',
+        silentCheckSsoFallback: false,
+        checkLoginIframe: false,
       })
 
       if (authenticated && keycloakInstance.tokenParsed) {

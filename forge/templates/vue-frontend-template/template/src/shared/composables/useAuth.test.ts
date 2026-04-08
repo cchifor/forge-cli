@@ -124,7 +124,7 @@ describe('useAuth – Keycloak mode', () => {
     await auth.init()
 
     expect(mockInit).toHaveBeenCalledWith(
-      expect.objectContaining({ onLoad: 'check-sso', pkceMethod: 'S256' }),
+      expect.objectContaining({ onLoad: 'check-sso', checkLoginIframe: false }),
     )
     expect(auth.isLoading.value).toBe(false)
   })
