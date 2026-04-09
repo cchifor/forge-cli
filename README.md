@@ -85,7 +85,7 @@ Follow the interactive prompts to pick your backend (Python, Node.js, or Rust), 
 cd my_platform/ && docker compose up --build
 ```
 
-Your app is now running at `http://localhost` (Traefik gateway). API health: `http://localhost/api/backend/v1/health/live`. Traefik dashboard: `http://localhost:8080`.
+Your app is now running at `http://app.localhost` (Traefik gateway). API health: `http://app.localhost/api/backend/v1/health/live`. Traefik dashboard: `http://localhost:8080`.
 
 ---
 
@@ -155,7 +155,7 @@ frontend:
   framework: vue
 ```
 
-Each backend gets its own directory, Dockerfile, database, migration container, and Traefik route. The API gateway routes `http://localhost/api/users/v1/users` → users service, `http://localhost/api/catalog/v1/products` → catalog service, etc.
+Each backend gets its own directory, Dockerfile, database, migration container, and Traefik route. All services are accessed through `http://app.localhost`: `/api/users/v1/users` → users service, `/api/catalog/v1/products` → catalog service, etc.
 
 **From CLI flags (no file needed):**
 
@@ -232,22 +232,22 @@ Expected output:
 
 ### Docker Compose
 
-Traefik is always present as the API gateway, routing requests by path prefix to the correct backend. Each backend has a dedicated migration container that runs before the service starts.
+Traefik is always present as the API gateway. All traffic goes through `http://app.localhost` using hostname-based routing. Each backend has a dedicated migration container that runs before the service starts.
 
 ```
-Browser → Traefik :80 (API Gateway, always present)
-            ├── /api/users/*          → users:5000         (Python/FastAPI)
-            ├── /api/catalog/*        → catalog:5001        (Rust/Axum)
-            ├── /api/notifications/*  → notifications:5002  (Node.js/Fastify)
-            ├── /                     → frontend:80         (nginx static + SPA)
-            └── (optional) ForwardAuth → Gatekeeper         (when auth enabled)
+Browser → http://app.localhost → Traefik :80
+            ├── Host(app.localhost) + /api/users/*          → users:5000         (Python/FastAPI)
+            ├── Host(app.localhost) + /api/catalog/*         → catalog:5001       (Rust/Axum)
+            ├── Host(app.localhost) + /api/notifications/*   → notifications:5002 (Node.js/Fastify)
+            ├── Host(app.localhost)                          → frontend:80        (nginx static + SPA)
+            └── (optional) ForwardAuth                      → Gatekeeper         (when auth enabled)
 
           PostgreSQL :5432 ← per-backend databases + Keycloak
           Migration containers run before each backend starts:
             users-migrate (Alembic) | catalog-migrate (sqlx) | notifications-migrate (Prisma)
 ```
 
-nginx serves static files and SPA fallback only — all API routing is handled by Traefik. Scaling works out of the box: `docker compose up --scale users=3` and Traefik auto-load-balances.
+nginx serves static files and SPA fallback only — all API routing is handled by Traefik. The URL `http://app.localhost` works identically with and without authentication. Scaling works out of the box: `docker compose up --scale users=3` and Traefik auto-load-balances.
 
 ### Agentic UI (Vue template, `--include-chat`)
 
@@ -339,7 +339,7 @@ All backends generate the same API contract: `GET /api/v1/health/live`, `GET /ap
 <details>
 <summary>Default ports and credentials</summary>
 
-All services are accessed through Traefik on port **80**. Direct ports are for debugging only.
+All services are accessed through `http://app.localhost` (Traefik on port 80). Direct ports are for debugging only.
 
 | Service | Port | Username | Password |
 |---------|------|----------|----------|

@@ -45,6 +45,8 @@ def generate(config: ProjectConfig, quiet: bool = False) -> Path:
         if bc.language == BackendLanguage.NODE:
             _log(f"  Generating Node.js backend '{bc.name}' ...")
             _generate_single_backend(bc, "node-service-template", backend_dir, quiet)
+            # Always install deps to create lockfile (needed for Docker builds)
+            _run_backend_cmd(backend_dir, ["npm", "install"], "Install dependencies")
             if not quiet:
                 _setup_node_backend(backend_dir)
         elif bc.language == BackendLanguage.RUST:
@@ -191,8 +193,9 @@ def _setup_rust_backend(backend_dir: Path) -> None:
 
 
 def _setup_node_backend(backend_dir: Path) -> None:
-    """Install deps, lint, type check, and test the generated Node.js backend."""
-    _run_backend_cmd(backend_dir, ["npm", "install"], "Install dependencies")
+    """Lint, type check, and test the generated Node.js backend.
+    Note: npm install already ran (always runs to create lockfile for Docker).
+    """
     _run_backend_cmd(backend_dir, ["npx", "biome", "check", "src/"], "Lint check")
     _run_backend_cmd(backend_dir, ["npx", "tsc", "--noEmit"], "Type check")
     _run_backend_cmd(backend_dir, ["npx", "vitest", "run"], "Tests")
