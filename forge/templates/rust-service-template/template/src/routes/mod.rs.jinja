@@ -9,5 +9,5 @@ pub fn api_routes() -> Router<PgPool> {
     Router::new()
         .merge(home::routes())
         .nest("/health", health::routes())
-        .nest("/items", items::routes())
+        .nest("/{{ entity_plural }}", items::routes())
 }

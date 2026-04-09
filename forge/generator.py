@@ -12,7 +12,7 @@ from copier import run_copy
 
 from forge import variable_mapper
 from forge.config import BackendLanguage, FrontendFramework, ProjectConfig
-from forge.docker_manager import render_compose, render_frontend_dockerfile, render_keycloak_realm, render_nginx_conf
+from forge.docker_manager import render_compose, render_frontend_dockerfile, render_init_db, render_keycloak_realm, render_nginx_conf
 from forge.e2e_templates import (
     generate_e2e_auth_conftest,
     generate_e2e_auth_tests,
@@ -67,12 +67,12 @@ def generate(config: ProjectConfig, quiet: bool = False) -> Path:
     if config.backends:
         _log("  Rendering docker-compose.yml ...")
         render_compose(config, project_root)
+        # Render init-db.sh (creates databases for all backends)
+        if len(config.backends) > 1 or config.include_keycloak:
+            _log("  Rendering init-db.sh ...")
+            render_init_db(config, project_root)
         # Copy auth infrastructure if Keycloak is enabled
         if config.include_keycloak:
-            # Write init-db.sh with explicit LF (CRLF breaks shebang in Linux)
-            src = (TEMPLATES_DIR / "init-db.sh").read_text(encoding="utf-8")
-            dst = project_root / "init-db.sh"
-            dst.write_bytes(src.replace("\r\n", "\n").encode("utf-8"))
             # Render Keycloak realm JSON
             _log("  Rendering keycloak-realm.json ...")
             render_keycloak_realm(config, project_root)

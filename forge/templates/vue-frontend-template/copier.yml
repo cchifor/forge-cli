@@ -72,6 +72,21 @@ api_proxy_target:
   type: str
   default: "http://localhost:5000"
 
+backend_features:
+  type: str
+  when: false
+  default: "{}"
+
+proxy_targets:
+  type: str
+  when: false
+  default: "[]"
+
+vite_proxy_config:
+  type: str
+  when: false
+  default: ""
+
 server_port:
   type: int
   default: 5173

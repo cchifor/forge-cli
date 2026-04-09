@@ -74,6 +74,8 @@ if not _answers_path.exists():
 _answers = json.loads(_answers_path.read_text(encoding="utf-8"))
 
 FEATURES_RAW = _answers["features"]
+BACKEND_FEATURES = _answers.get("backend_features", {})
+PROXY_TARGETS = _answers.get("proxy_targets", [])
 INCLUDE_AUTH = _answers["include_auth"]
 INCLUDE_CHAT = _answers["include_chat"]
 INCLUDE_OPENAPI = _answers["include_openapi"]
@@ -392,15 +394,28 @@ def main() -> None:
     print(f"  Setting up: {PROJECT_NAME}")
     print("=" * 60)
 
+    # Build feature list with backend_name mapping
+    feature_backend_map: dict[str, str] = {}
+    if BACKEND_FEATURES:
+        for backend_name, info in BACKEND_FEATURES.items():
+            for feat in info.get("features", []):
+                feature_backend_map[feat.strip()] = backend_name
+
+    # Fallback: parse from flat features string if no backend mapping
     features = [f.strip() for f in FEATURES_RAW.split(",") if f.strip()]
+    if not feature_backend_map:
+        default_backend = "backend"
+        for feat in features:
+            feature_backend_map[feat] = default_backend
 
     print("\n> Generating features")
     for name in features:
         ctx = make_feature_context(name)
+        ctx["backend_name"] = feature_backend_map.get(name, "backend")
         generate_feature(ctx)
         generate_msw_handlers(ctx)
         inject_feature_into_hubs(ctx)
-        print(f"    {ctx['plural']}: 8 files (index, api, schema, test, list, create, detail, msw)")
+        print(f"    {ctx['plural']}: 8 files → /api/{ctx['backend_name']}/v1/{ctx['plural']}")
     print(f"  Generated {len(features)} feature(s): {', '.join(features)}")
 
     print("\n> Patching conditional files")

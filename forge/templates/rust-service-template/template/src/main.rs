@@ -20,11 +20,6 @@ async fn main() {
         .init();
 
     let pool = db::create_pool().await;
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .expect("Failed to run migrations");
-
     let app = app::create_app(pool);
     let port: u16 = std::env::var("PORT")
         .ok()

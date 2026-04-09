@@ -57,3 +57,8 @@ project_slug:
   type: str
   when: false
   default: "{{ project_name | replace('-', '_') }}"
+
+entity_plural:
+  type: str
+  when: false
+  default: "items"

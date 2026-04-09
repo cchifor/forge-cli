@@ -7,6 +7,11 @@ from typing import Any
 from forge.config import BackendConfig, FrontendFramework, ProjectConfig
 
 
+def _primary_feature(bc: BackendConfig) -> str:
+    """Return the first feature name for route registration."""
+    return bc.features[0] if bc.features else "items"
+
+
 def backend_context(bc: BackendConfig) -> dict[str, Any]:
     """Build data dict for the python-service-template (Copier)."""
     return {
@@ -15,6 +20,7 @@ def backend_context(bc: BackendConfig) -> dict[str, Any]:
         "server_port": bc.server_port,
         "db_name": bc.name.replace("-", "_"),
         "python_version": bc.python_version,
+        "entity_plural": _primary_feature(bc),
     }
 
 
@@ -26,6 +32,7 @@ def rust_backend_context(bc: BackendConfig) -> dict[str, Any]:
         "server_port": bc.server_port,
         "db_name": bc.name.replace("-", "_"),
         "rust_edition": bc.rust_edition,
+        "entity_plural": _primary_feature(bc),
     }
 
 
@@ -37,7 +44,43 @@ def node_backend_context(bc: BackendConfig) -> dict[str, Any]:
         "server_port": bc.server_port,
         "db_name": bc.name.replace("-", "_"),
         "node_version": bc.node_version,
+        "entity_plural": _primary_feature(bc),
     }
+
+
+def _build_backend_features_json(config: ProjectConfig) -> str:
+    """Build JSON mapping of backend name → {port, features} for frontend templates."""
+    import json
+    mapping = {}
+    for bc in config.backends:
+        mapping[bc.name] = {
+            "port": bc.server_port,
+            "features": bc.features,
+        }
+    return json.dumps(mapping)
+
+
+def _build_proxy_targets_json(config: ProjectConfig) -> str:
+    """Build JSON array of {name, port} for post_generate.py."""
+    import json
+    return json.dumps([
+        {"name": bc.name, "port": bc.server_port}
+        for bc in config.backends
+    ])
+
+
+def _build_vite_proxy_config(config: ProjectConfig) -> str:
+    """Build the Vite proxy config block as a TypeScript object literal."""
+    lines = []
+    for bc in config.backends:
+        lines.append(
+            f"      '/api/{bc.name}': {{\n"
+            f"        target: 'http://localhost:{bc.server_port}',\n"
+            f"        changeOrigin: true,\n"
+            f"        rewrite: (path: string) => path.replace(/^\\/api\\/{bc.name}/, '/api'),\n"
+            f"      }},"
+        )
+    return "\n".join(lines)
 
 
 def vue_context(config: ProjectConfig) -> dict[str, Any]:
@@ -52,7 +95,7 @@ def vue_context(config: ProjectConfig) -> dict[str, Any]:
         "project_name": fc.project_name,
         "project_slug": config.frontend_slug,
         "description": fc.description,
-        "features": ", ".join(fc.features),
+        "features": ", ".join(config.all_features),
         "author_name": fc.author_name,
         "version": fc.version,
         "package_manager": fc.package_manager,
@@ -66,6 +109,9 @@ def vue_context(config: ProjectConfig) -> dict[str, Any]:
         "keycloak_realm": fc.keycloak_realm,
         "keycloak_client_id": fc.keycloak_client_id or config.frontend_slug,
         "default_color_scheme": fc.default_color_scheme,
+        "backend_features": _build_backend_features_json(config),
+        "proxy_targets": _build_proxy_targets_json(config),
+        "vite_proxy_config": _build_vite_proxy_config(config),
     }
 
 
@@ -81,7 +127,7 @@ def svelte_context(config: ProjectConfig) -> dict[str, Any]:
         "project_name": fc.project_name,
         "project_slug": config.frontend_slug,
         "description": fc.description,
-        "features": ", ".join(fc.features),
+        "features": ", ".join(config.all_features),
         "author_name": fc.author_name,
         "version": fc.version,
         "include_auth": fc.include_auth,
@@ -92,6 +138,8 @@ def svelte_context(config: ProjectConfig) -> dict[str, Any]:
         "keycloak_url": fc.keycloak_url,
         "keycloak_realm": fc.keycloak_realm,
         "keycloak_client_id": fc.keycloak_client_id or config.frontend_slug,
+        "backend_features": _build_backend_features_json(config),
+        "proxy_targets": _build_proxy_targets_json(config),
     }
 
 
@@ -107,7 +155,7 @@ def flutter_context(config: ProjectConfig) -> dict[str, Any]:
         "project_slug": config.frontend_slug,
         "org_name": fc.org_name,
         "description": fc.description,
-        "features": ", ".join(fc.features),
+        "features": ", ".join(config.all_features),
         "version": fc.version,
         "include_auth": fc.include_auth,
         "include_chat": fc.include_chat,

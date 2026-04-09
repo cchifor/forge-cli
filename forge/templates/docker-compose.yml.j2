@@ -1,37 +1,43 @@
 services:
 {% for be in backends %}
-{% if be.language == "python" %}
   # ── Migrations for {{ be.name }} ──
   {{ be.name }}-migrate:
     build:
       context: ./{{ be.name }}
       dockerfile: Dockerfile
     environment:
+{% if be.language == "python" %}
       ENV: development
       APP__DB__URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/{{ be.db_name }}"
     command: ["python", "-m", "app", "db", "upgrade"]
+{% elif be.language == "node" %}
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ be.db_name }}"
+    command: ["npx", "prisma", "migrate", "deploy"]
+{% elif be.language == "rust" %}
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ be.db_name }}"
+    command: ["/app/migrate"]
+{% endif %}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - app-network
-{% endif %}
 
   # ── {{ be.name }} ──
   {{ be.name }}:
     build:
       context: ./{{ be.name }}
       dockerfile: Dockerfile
-    ports:
-      - "{{ be.port }}:{{ be.port }}"
     environment:
 {% if be.language == "python" %}
       ENV: development
       APP__DB__URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/{{ be.db_name }}"
 {% elif be.language == "node" %}
       NODE_ENV: development
+      PORT: "{{ be.port }}"
       DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ be.db_name }}"
 {% elif be.language == "rust" %}
+      PORT: "{{ be.port }}"
       DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/{{ be.db_name }}"
       RUST_LOG: info
 {% endif %}
@@ -43,21 +49,21 @@ services:
 {% else %}
       APP__SECURITY__AUTH__ENABLED: "false"
 {% endif %}
-{% if include_keycloak %}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.{{ be.name }}.rule=PathPrefix(`/api`)"
-      - "traefik.http.routers.{{ be.name }}.middlewares=auth"
-      - "traefik.http.services.{{ be.name }}.loadbalancer.server.port={{ be.port }}"
+      - "traefik.http.routers.{{ be.name }}.rule=PathPrefix(`/api/{{ be.name }}`)"
+      - "traefik.http.routers.{{ be.name }}.entrypoints=web"
+      - "traefik.http.middlewares.{{ be.name }}-rewrite.replacepathregex.regex=^/api/{{ be.name }}/(.*)"
+      - "traefik.http.middlewares.{{ be.name }}-rewrite.replacepathregex.replacement=/api/$$1"
+{% if include_keycloak %}
+      - "traefik.http.routers.{{ be.name }}.middlewares={{ be.name }}-rewrite,auth"
+{% else %}
+      - "traefik.http.routers.{{ be.name }}.middlewares={{ be.name }}-rewrite"
 {% endif %}
+      - "traefik.http.services.{{ be.name }}.loadbalancer.server.port={{ be.port }}"
     depends_on:
-{% if be.language == "python" %}
       {{ be.name }}-migrate:
         condition: service_completed_successfully
-{% else %}
-      postgres:
-        condition: service_healthy
-{% endif %}
 {% if include_keycloak %}
       keycloak:
         condition: service_healthy
@@ -77,7 +83,7 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
-{% if include_keycloak %}
+{% if backends | length > 1 or include_keycloak %}
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
 {% endif %}
     healthcheck:
@@ -89,20 +95,17 @@ services:
       - app-network
 
 {% if has_frontend %}
-  # ── Frontend (nginx) ──
+  # ── Frontend (nginx — static files + SPA fallback only) ──
   frontend:
     build:
       context: ./{{ frontend_slug }}
       dockerfile: Dockerfile
-    ports:
-      - "{{ frontend_port }}:80"
-{% if include_keycloak %}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
       - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
-{% endif %}
     depends_on:
 {% for be in backends %}
       - {{ be.name }}
@@ -111,14 +114,12 @@ services:
       - app-network
 {% endif %}
 
-{% if include_keycloak %}
-  # ── Edge Router ──
-  # Dashboard: http://localhost:{{ traefik_dashboard_port }}
+  # ── API Gateway ──
   traefik:
     image: traefik:v2.11
     ports:
       - "80:80"
-      - "{{ traefik_dashboard_port }}:8080"
+      - "8080:8080"
     environment:
       TRAEFIK_API_INSECURE: "true"
       TRAEFIK_PROVIDERS_DOCKER: "true"
@@ -129,6 +130,7 @@ services:
     networks:
       - app-network
 
+{% if include_keycloak %}
   # ── Auth Gateway (OIDC ForwardAuth) ──
   gatekeeper:
     build:

@@ -32,6 +32,11 @@ db_name:
   help: "PostgreSQL database name"
   default: "{{ project_name | replace('-', '_') }}"
 
+entity_plural:
+  type: str
+  when: false
+  default: "items"
+
 node_version:
   type: str
   help: "Node.js version"

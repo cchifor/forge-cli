@@ -21,6 +21,7 @@ def _make_config(framework=FrontendFramework.VUE, **fe_overrides):
     bc = BackendConfig(
         project_name="Test App",
         description="A test service",
+        features=["items", "orders"],
         python_version="3.13",
         server_port=5000,
     )
@@ -64,12 +65,12 @@ class TestBackendContext:
         assert ctx["python_version"] == "3.13"
 
     def test_minimal_schema(self):
-        """Backend context should only have the 5 fields from copier.yml."""
+        """Backend context should have the expected fields from copier.yml."""
         config = _make_config()
         ctx = backend_context(config.backend)
         assert set(ctx.keys()) == {
             "project_name", "project_description", "server_port",
-            "db_name", "python_version",
+            "db_name", "python_version", "entity_plural",
         }
 
 

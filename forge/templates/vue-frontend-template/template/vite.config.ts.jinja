@@ -43,10 +43,7 @@ export default defineConfig({
   server: {
     port: {{ server_port }},
     proxy: {
-      '/api': {
-        target: '{{ api_proxy_target }}',
-        changeOrigin: true,
-      },
+{{ vite_proxy_config }}
     },
   },
   test: {

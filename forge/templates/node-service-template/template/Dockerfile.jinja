@@ -4,7 +4,7 @@ FROM node:{{ node_version }}-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 COPY prisma ./prisma/
 RUN npx prisma generate
@@ -19,7 +19,7 @@ FROM node:{{ node_version }}-slim
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist/
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma

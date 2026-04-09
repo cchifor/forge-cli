@@ -172,11 +172,17 @@ def _build_config(args: argparse.Namespace, cfg: dict) -> ProjectConfig:
         # Multi-backend from config file
         for i, be_cfg in enumerate(backends_raw):
             lang = be_cfg.get("language", "python")
+            features_raw = be_cfg.get("features", "items")
+            if isinstance(features_raw, list):
+                features = features_raw
+            else:
+                features = [f.strip() for f in str(features_raw).split(",") if f.strip()]
             backends.append(BackendConfig(
                 name=be_cfg.get("name", f"backend-{i}"),
                 project_name=project_name,
                 language=BackendLanguage(lang) if lang in ("python", "node", "rust") else BackendLanguage.PYTHON,
                 description=be_cfg.get("description", description),
+                features=features,
                 python_version=be_cfg.get("python_version", "3.13"),
                 node_version=be_cfg.get("node_version", "22"),
                 rust_edition=be_cfg.get("rust_edition", "2024"),
@@ -206,8 +212,16 @@ def _build_config(args: argparse.Namespace, cfg: dict) -> ProjectConfig:
     include_auth = False
 
     if framework != FrontendFramework.NONE:
-        features_raw = _get(args, "features", cfg, "frontend", "features", default="items")
-        features = [f.strip() for f in features_raw.split(",") if f.strip()]
+        # Aggregate features from all backends for the frontend
+        all_backend_features = []
+        for bc in backends:
+            all_backend_features.extend(bc.features)
+        # Allow frontend-level features override, fallback to backend-aggregated
+        features_raw = _get(args, "features", cfg, "frontend", "features", default=None)
+        if features_raw:
+            features = [f.strip() for f in features_raw.split(",") if f.strip()]
+        else:
+            features = all_backend_features if all_backend_features else ["items"]
         include_auth = _get(args, "include_auth", cfg, "frontend", "include_auth", default=True)
 
         frontend = FrontendConfig(
@@ -530,7 +544,7 @@ def _print_summary(config: ProjectConfig) -> None:
         if config.frontend.framework != FrontendFramework.FLUTTER:
             fw += f" on port {config.frontend.server_port}"
         print(f"  Frontend:   {fw}")
-        print(f"  Features:   {', '.join(config.frontend.features)}")
+        print(f"  Features:   {', '.join(config.all_features)}")
     else:
         print("  Frontend:   None")
     print(f"  Auth:       {'Keycloak' if config.include_keycloak else 'Disabled'}")

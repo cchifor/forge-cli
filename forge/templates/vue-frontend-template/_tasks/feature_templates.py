@@ -92,7 +92,7 @@ export function use{Plural}(params: {{
       if (limit != null) searchParams.set('limit', String(limit))
       if (search) searchParams.set('search', search)
 
-      const raw = await client.get('api/v1/{plural}', {{ searchParams }}).json()
+      const raw = await client.get('api/{backend_name}/v1/{plural}', {{ searchParams }}).json()
       return paginated{Singular}ResponseSchema.parse(raw)
     }},
     placeholderData: (prev) => prev,
@@ -105,7 +105,7 @@ export function use{Singular}(id: Ref<string> | string) {{
   return useQuery({{
     queryKey: computed(() => ['{plural}', unref(id)]),
     queryFn: async () => {{
-      const raw = await client.get(`api/v1/{plural}/${{unref(id)}}`).json()
+      const raw = await client.get(`api/{backend_name}/v1/{plural}/${{unref(id)}}`).json()
       return {singular}Schema.parse(raw)
     }},
     enabled: computed(() => !!unref(id)),
@@ -118,7 +118,7 @@ export function useCreate{Singular}() {{
 
   return useMutation({{
     mutationFn: async (data: Record<string, unknown>) => {{
-      const raw = await client.post('api/v1/{plural}', {{ json: data }}).json()
+      const raw = await client.post('api/{backend_name}/v1/{plural}', {{ json: data }}).json()
       return {singular}Schema.parse(raw)
     }},
     onSuccess: () => {{
@@ -133,7 +133,7 @@ export function useUpdate{Singular}() {{
 
   return useMutation({{
     mutationFn: async ({{ id, data }}: {{ id: string; data: Record<string, unknown> }}) => {{
-      const raw = await client.patch(`api/v1/{plural}/${{id}}`, {{ json: data }}).json()
+      const raw = await client.patch(`api/{backend_name}/v1/{plural}/${{id}}`, {{ json: data }}).json()
       return {singular}Schema.parse(raw)
     }},
     onSuccess: (_data, variables) => {{
@@ -149,7 +149,7 @@ export function useDelete{Singular}() {{
 
   return useMutation({{
     mutationFn: async (id: string) => {{
-      await client.delete(`api/v1/{plural}/${{id}}`)
+      await client.delete(`api/{backend_name}/v1/{plural}/${{id}}`)
     }},
     onSuccess: () => {{
       queryClient.invalidateQueries({{ queryKey: ['{plural}'] }})

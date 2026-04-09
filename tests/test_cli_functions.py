@@ -157,11 +157,10 @@ class TestPrintSummary:
     def test_with_vue_frontend(self):
         config = ProjectConfig(
             project_name="Shop",
-            backends=[BackendConfig(project_name="Shop", server_port=8000)],
+            backends=[BackendConfig(project_name="Shop", server_port=8000, features=["products", "orders"])],
             frontend=FrontendConfig(
                 framework=FrontendFramework.VUE,
                 project_name="Shop",
-                features=["products", "orders"],
                 server_port=3000,
             ),
         )

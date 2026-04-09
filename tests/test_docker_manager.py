@@ -57,7 +57,6 @@ class TestRenderCompose:
         data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
 
         assert "frontend" in data["services"]
-        assert data["services"]["frontend"]["ports"] == ["5173:80"]
 
     def test_flutter_included_in_compose(self, tmp_path):
         config = _make_config(framework=FrontendFramework.FLUTTER)
@@ -65,7 +64,6 @@ class TestRenderCompose:
         data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
 
         assert "frontend" in data["services"]
-        assert data["services"]["frontend"]["ports"] == ["5173:80"]
 
     def test_frontend_no_vite_env_vars(self, tmp_path):
         config = _make_config(framework=FrontendFramework.VUE)
@@ -108,13 +106,21 @@ class TestRenderCompose:
 
         assert "app-network" in data["networks"]
 
-    def test_backend_ports(self, tmp_path):
+    def test_backend_has_traefik_labels(self, tmp_path):
         config = _make_config(has_frontend=False)
-        config.backend.server_port = 8000
         compose_path = render_compose(config, tmp_path)
         data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
 
-        assert data["services"]["backend"]["ports"] == ["8000:8000"]
+        labels = data["services"]["backend"]["labels"]
+        assert any("traefik.enable=true" in l for l in labels)
+        assert any("/api/backend" in l for l in labels)
+
+    def test_traefik_always_present(self, tmp_path):
+        config = _make_config(has_frontend=False)
+        compose_path = render_compose(config, tmp_path)
+        data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
+
+        assert "traefik" in data["services"]
 
     def test_postgres_healthcheck(self, tmp_path):
         config = _make_config(has_frontend=False)
@@ -188,18 +194,17 @@ class TestRenderFrontendDockerfile:
 
 
 class TestRenderNginxConf:
-    def test_renders_proxy(self, tmp_path):
+    def test_static_only_no_api_proxy(self, tmp_path):
         config = _make_config()
         path = render_nginx_conf(config, tmp_path)
         content = path.read_text(encoding="utf-8")
 
-        assert "proxy_pass http://backend:5000/api/" in content
         assert "try_files" in content
+        assert "proxy_pass" not in content
 
-    def test_custom_backend_port(self, tmp_path):
+    def test_spa_fallback(self, tmp_path):
         config = _make_config()
-        config.backend.server_port = 8000
         path = render_nginx_conf(config, tmp_path)
         content = path.read_text(encoding="utf-8")
 
-        assert "proxy_pass http://backend:8000/api/" in content
+        assert "/index.html" in content

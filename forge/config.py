@@ -59,6 +59,7 @@ class BackendConfig:
     project_name: str = ""
     language: BackendLanguage = BackendLanguage.PYTHON
     description: str = "A microservice"
+    features: list[str] = field(default_factory=lambda: ["items"])
     python_version: str = "3.13"
     node_version: str = "22"
     rust_edition: str = "2024"
@@ -70,6 +71,8 @@ class BackendConfig:
             raise ValueError(
                 f"Backend name '{self.name}' must be lowercase kebab/snake case."
             )
+        if self.features:
+            validate_features(self.features)
 
 
 @dataclass
@@ -192,6 +195,14 @@ class ProjectConfig:
         names = [bc.name for bc in self.backends]
         if len(names) != len(set(names)):
             raise ValueError("Backend names must be unique.")
+
+    @property
+    def all_features(self) -> list[str]:
+        """Aggregate features across all backends."""
+        features = []
+        for bc in self.backends:
+            features.extend(bc.features)
+        return features
 
     @property
     def project_slug(self) -> str:

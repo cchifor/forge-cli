@@ -131,16 +131,34 @@ def render_keycloak_realm(config: ProjectConfig, project_root: Path) -> Path:
     return realm_path
 
 
+def render_init_db(config: ProjectConfig, project_root: Path) -> Path:
+    """Render init-db.sh that creates databases for all backends + keycloak."""
+    env = _jinja_env()
+    template = env.get_template("init-db.sh.j2")
+
+    # Collect all databases that need creating beyond the default POSTGRES_DB
+    extra_dbs = set()
+    for bc in config.backends:
+        db_name = bc.name.replace("-", "_")
+        extra_dbs.add(db_name)
+    if config.include_keycloak:
+        extra_dbs.add("keycloak")
+    # Remove the primary db (created by POSTGRES_DB env var)
+    primary_db = config.backend_slug.replace("-", "_") if config.backends else "backend"
+    extra_dbs.discard(primary_db)
+
+    output = template.render({"extra_databases": sorted(extra_dbs)})
+    init_path = project_root / "init-db.sh"
+    # Write with LF line endings (CRLF breaks shebang in Linux containers)
+    init_path.write_bytes(output.replace("\r\n", "\n").encode("utf-8"))
+    return init_path
+
+
 def render_nginx_conf(config: ProjectConfig, frontend_dir: Path) -> Path:
-    """Render nginx.conf into the frontend directory."""
+    """Render nginx.conf into the frontend directory (static files + SPA fallback only)."""
     env = _jinja_env()
     template = env.get_template("nginx.conf.j2")
-
-    context = {
-        "backend_port": config.backend.server_port if config.backend else 5000,
-    }
-
-    output = template.render(context)
+    output = template.render({})
     nginx_path = frontend_dir / "nginx.conf"
     nginx_path.write_text(output, encoding="utf-8")
     return nginx_path

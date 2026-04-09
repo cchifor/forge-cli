@@ -18,7 +18,7 @@ export async function buildApp() {
 
 	await app.register(homeRoutes, { prefix: "/api/v1" });
 	await app.register(healthRoutes, { prefix: "/api/v1/health" });
-	await app.register(itemRoutes, { prefix: "/api/v1/items" });
+	await app.register(itemRoutes, { prefix: "/api/v1/{{ entity_plural }}" });
 
 	return app;
 }
