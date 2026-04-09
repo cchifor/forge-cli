@@ -254,6 +254,9 @@ def _run_backend_cmd(backend_dir: Path, cmd: list[str], description: str) -> boo
     except subprocess.TimeoutExpired:
         print(f"  [!!] {description} timed out (5m)")
         return False
+    except FileNotFoundError:
+        print(f"  [!!] {description} skipped ({cmd[0]} not found)")
+        return False
     if result.returncode == 0:
         print(f"  [ok] {description}")
         return True
