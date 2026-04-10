@@ -26,14 +26,14 @@ const TENANT_HEADERS = {
 
 const mockItem = {
 	id: "550e8400-e29b-41d4-a716-446655440000",
-	customerId: "00000000-0000-0000-0000-000000000001",
-	userId: "00000000-0000-0000-0000-000000000001",
+	customer_id: "00000000-0000-0000-0000-000000000001",
+	user_id: "00000000-0000-0000-0000-000000000001",
 	name: "Test Item",
 	description: null,
 	tags: [],
 	status: "DRAFT" as const,
-	createdAt: new Date("2024-01-01"),
-	updatedAt: new Date("2024-01-01"),
+	created_at: new Date("2024-01-01"),
+	updated_at: new Date("2024-01-01"),
 };
 
 let app: FastifyInstance;
@@ -78,7 +78,7 @@ describe("Item CRUD endpoints", () => {
 			expect(prisma.item.findMany).toHaveBeenCalledWith(
 				expect.objectContaining({
 					where: expect.objectContaining({
-						customerId: TENANT_HEADERS["x-gatekeeper-user-id"],
+						customer_id: TENANT_HEADERS["x-gatekeeper-user-id"],
 					}),
 				}),
 			);
@@ -114,8 +114,8 @@ describe("Item CRUD endpoints", () => {
 			expect(prisma.item.create).toHaveBeenCalledWith(
 				expect.objectContaining({
 					data: expect.objectContaining({
-						customerId: TENANT_HEADERS["x-gatekeeper-user-id"],
-						userId: TENANT_HEADERS["x-gatekeeper-user-id"],
+						customer_id: TENANT_HEADERS["x-gatekeeper-user-id"],
+						user_id: TENANT_HEADERS["x-gatekeeper-user-id"],
 					}),
 				}),
 			);

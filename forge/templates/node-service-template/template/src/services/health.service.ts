@@ -5,8 +5,8 @@ export async function checkDatabase(): Promise<ComponentStatus> {
 	const start = performance.now();
 	try {
 		await prisma.$queryRaw`SELECT 1`;
-		return { status: "UP", latencyMs: Math.round(performance.now() - start) };
+		return { status: "UP", latency_ms: Math.round(performance.now() - start) };
 	} catch {
-		return { status: "DOWN", latencyMs: null };
+		return { status: "DOWN", latency_ms: null };
 	}
 }

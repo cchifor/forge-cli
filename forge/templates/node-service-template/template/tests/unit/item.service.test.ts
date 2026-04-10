@@ -26,14 +26,14 @@ const tenant: TenantContext = {
 
 const mockItem = {
 	id: "550e8400-e29b-41d4-a716-446655440000",
-	customerId: tenant.customerId,
-	userId: tenant.userId,
+	customer_id: tenant.customerId,
+	user_id: tenant.userId,
 	name: "Test Item",
 	description: null,
 	tags: [],
 	status: "DRAFT" as const,
-	createdAt: new Date(),
-	updatedAt: new Date(),
+	created_at: new Date(),
+	updated_at: new Date(),
 };
 
 describe("ItemService", () => {
@@ -52,7 +52,7 @@ describe("ItemService", () => {
 			expect(result.total).toBe(1);
 			expect(prisma.item.findMany).toHaveBeenCalledWith(
 				expect.objectContaining({
-					where: expect.objectContaining({ customerId: tenant.customerId }),
+					where: expect.objectContaining({ customer_id: tenant.customerId }),
 				}),
 			);
 		});
@@ -66,7 +66,7 @@ describe("ItemService", () => {
 			expect(prisma.item.findMany).toHaveBeenCalledWith(
 				expect.objectContaining({
 					where: expect.objectContaining({
-						customerId: tenant.customerId,
+						customer_id: tenant.customerId,
 						status: "ACTIVE",
 					}),
 				}),
@@ -89,8 +89,8 @@ describe("ItemService", () => {
 			expect(prisma.item.create).toHaveBeenCalledWith(
 				expect.objectContaining({
 					data: expect.objectContaining({
-						customerId: tenant.customerId,
-						userId: tenant.userId,
+						customer_id: tenant.customerId,
+						user_id: tenant.userId,
 						name: "Test Item",
 					}),
 				}),
@@ -107,7 +107,7 @@ describe("ItemService", () => {
 			// Verify duplicate check includes customerId
 			expect(prisma.item.findFirst).toHaveBeenCalledWith(
 				expect.objectContaining({
-					where: { name: "Test Item", customerId: tenant.customerId },
+					where: { name: "Test Item", customer_id: tenant.customerId },
 				}),
 			);
 		});
@@ -122,7 +122,7 @@ describe("ItemService", () => {
 			expect(result).toEqual(mockItem);
 			expect(prisma.item.findFirst).toHaveBeenCalledWith(
 				expect.objectContaining({
-					where: { id: mockItem.id, customerId: tenant.customerId },
+					where: { id: mockItem.id, customer_id: tenant.customerId },
 				}),
 			);
 		});

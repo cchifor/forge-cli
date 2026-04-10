@@ -13,8 +13,8 @@ export async function healthRoutes(app: FastifyInstance) {
 		return reply.code(overall === "UP" ? 200 : 503).send({
 			status: overall,
 			components: { database: db },
-			systemInfo: {
-				nodeVersion: process.version,
+			system_info: {
+				node_version: process.version,
 				platform: process.platform,
 			},
 		});

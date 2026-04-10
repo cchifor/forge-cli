@@ -11,13 +11,13 @@ export type LivenessResponse = z.infer<typeof LivenessResponse>;
 
 export const ComponentStatus = z.object({
 	status: HealthStatus,
-	latencyMs: z.number().nullable(),
+	latency_ms: z.number().nullable(),
 });
 export type ComponentStatus = z.infer<typeof ComponentStatus>;
 
 export const ReadinessResponse = z.object({
 	status: HealthStatus,
 	components: z.record(ComponentStatus),
-	systemInfo: z.record(z.string()),
+	system_info: z.record(z.string()),
 });
 export type ReadinessResponse = z.infer<typeof ReadinessResponse>;

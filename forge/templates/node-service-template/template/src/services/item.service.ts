@@ -15,11 +15,11 @@ interface ListParams {
 export async function list(params: ListParams): Promise<PaginatedItems> {
 	const { tenant, skip, limit, status, search } = params;
 
-	const where: Prisma.ItemWhereInput = { customerId: tenant.customerId };
+	const where: Prisma.ItemWhereInput = { customer_id: tenant.customerId };
 	if (status) where.status = status;
 	if (search) {
 		where.AND = [
-			{ customerId: tenant.customerId },
+			{ customer_id: tenant.customerId },
 			{
 				OR: [
 					{ name: { contains: search, mode: "insensitive" } },
@@ -27,11 +27,11 @@ export async function list(params: ListParams): Promise<PaginatedItems> {
 				],
 			},
 		];
-		delete where.customerId;
+		delete where.customer_id;
 	}
 
 	const [items, total] = await Promise.all([
-		prisma.item.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" } }),
+		prisma.item.findMany({ where, skip, take: limit, orderBy: { created_at: "desc" } }),
 		prisma.item.count({ where }),
 	]);
 
@@ -40,22 +40,22 @@ export async function list(params: ListParams): Promise<PaginatedItems> {
 
 export async function create(tenant: TenantContext, data: ItemCreate) {
 	const existing = await prisma.item.findFirst({
-		where: { name: data.name, customerId: tenant.customerId },
+		where: { name: data.name, customer_id: tenant.customerId },
 	});
 	if (existing) throw new AlreadyExistsError("Item", data.name);
 
 	return prisma.item.create({
 		data: {
 			...data,
-			customerId: tenant.customerId,
-			userId: tenant.userId,
+			customer_id: tenant.customerId,
+			user_id: tenant.userId,
 		},
 	});
 }
 
 export async function getById(tenant: TenantContext, id: string) {
 	const item = await prisma.item.findFirst({
-		where: { id, customerId: tenant.customerId },
+		where: { id, customer_id: tenant.customerId },
 	});
 	if (!item) throw new NotFoundError("Item", id);
 	return item;
@@ -66,7 +66,7 @@ export async function update(tenant: TenantContext, id: string, data: ItemUpdate
 
 	if (data.name) {
 		const existing = await prisma.item.findFirst({
-			where: { name: data.name, customerId: tenant.customerId, NOT: { id } },
+			where: { name: data.name, customer_id: tenant.customerId, NOT: { id } },
 		});
 		if (existing) throw new AlreadyExistsError("Item", data.name);
 	}

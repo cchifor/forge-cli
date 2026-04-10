@@ -22,14 +22,14 @@ export type ItemUpdate = z.infer<typeof ItemUpdate>;
 
 export const Item = z.object({
 	id: z.string().uuid(),
-	customerId: z.string(),
-	userId: z.string(),
+	customer_id: z.string(),
+	user_id: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
 	tags: z.array(z.string()),
 	status: ItemStatus,
-	createdAt: z.coerce.date(),
-	updatedAt: z.coerce.date(),
+	created_at: z.coerce.date(),
+	updated_at: z.coerce.date(),
 });
 export type Item = z.infer<typeof Item>;
 
