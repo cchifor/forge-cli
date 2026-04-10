@@ -377,15 +377,25 @@ def _redirect_to_login(
     forwarded_host: str | None,
     *,
     tc: TenantConfig | None = None,
-) -> RedirectResponse:
-    """Build a 302 redirect to the Keycloak login page for *tenant*."""
+) -> Response | RedirectResponse:
+    """Build a 302 redirect to the Keycloak login page for *tenant*.
+
+    For API requests (URI starts with ``/api/``), return 401 instead of
+    302 so the frontend's XHR/fetch client can handle it gracefully.
+    A 302 redirect on an API call causes the browser to follow it across
+    origins (to Keycloak), which triggers a CORS error.
+    """
+    original_uri = request.headers.get("x-forwarded-uri", "/")
+
+    # API requests get 401 — the frontend handles re-authentication
+    if original_uri.startswith("/api/"):
+        return Response(status_code=401, content="Session expired")
+
+    # Page navigations get 302 — redirect to Keycloak login
     # The callback must be reachable from the browser, so use the forwarded host
     scheme = request.headers.get("x-forwarded-proto", "http")
     host = forwarded_host or request.headers.get("host", "localhost")
     redirect_uri = f"{scheme}://{host}/callback"
-
-    # Preserve the originally-requested URI as ``state``
-    original_uri = request.headers.get("x-forwarded-uri", "/")
 
     login_url = build_login_url(
         tenant,
