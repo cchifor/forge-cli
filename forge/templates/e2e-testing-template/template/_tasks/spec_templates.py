@@ -5,6 +5,7 @@ import {{ test, expect }} from '../e2e-platform/fixtures/app';
 
 test.describe('{Plural}', () => {{
   test.beforeEach(async ({{ app }}) => {{
+    await app.nav.goToDashboard();
     await app.auth.loginAs('user');
   }});
 
@@ -109,6 +110,7 @@ test.describe('Authentication', () => {
   });
 
   test('authenticated user accesses protected page', async ({ app }) => {
+    await app.nav.goToDashboard();
     await app.auth.loginAs('user');
     await app.nav.goToDashboard();
     await app.page.waitForTimeout(2000);
@@ -117,6 +119,7 @@ test.describe('Authentication', () => {
   });
 
   test('logout ends session', async ({ app }) => {
+    await app.nav.goToDashboard();
     await app.auth.loginAs('user');
     await app.auth.logout();
     await app.nav.goToDashboard();

@@ -19,17 +19,10 @@ export type AppFixtures = {
 };
 
 export const test = base.extend<AppFixtures>({
-  app: async ({ page, request{% if include_auth %}, context{% endif %} }, use) => {
-{% if include_auth %}
-    // Pass a cookie getter so API calls include the session cookie
-    const getCookies = async () => {
-      const cookies = await context.cookies();
-      return cookies.map(c => `${c.name}=${c.value}`).join('; ');
-    };
-{% endif %}
+  app: async ({ page{% if include_auth %}, context{% endif %} }, use) => {
     await use({
       nav: new Navigation(page),
-      api: new ApiHelper(request{% if include_auth %}, getCookies{% endif %}),
+      api: new ApiHelper(page),
       assertions: new Assertions(page),
       page,
 {% if include_auth %}
