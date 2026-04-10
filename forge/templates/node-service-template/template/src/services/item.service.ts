@@ -2,8 +2,10 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { NotFoundError, AlreadyExistsError } from "../lib/errors.js";
 import type { ItemCreate, ItemUpdate, ItemStatus, PaginatedItems } from "../schemas/item.schema.js";
+import type { TenantContext } from "../middleware/tenant.js";
 
 interface ListParams {
+	tenant: TenantContext;
 	skip: number;
 	limit: number;
 	status?: ItemStatus;
@@ -11,15 +13,21 @@ interface ListParams {
 }
 
 export async function list(params: ListParams): Promise<PaginatedItems> {
-	const { skip, limit, status, search } = params;
+	const { tenant, skip, limit, status, search } = params;
 
-	const where: Prisma.ItemWhereInput = {};
+	const where: Prisma.ItemWhereInput = { customerId: tenant.customerId };
 	if (status) where.status = status;
 	if (search) {
-		where.OR = [
-			{ name: { contains: search, mode: "insensitive" } },
-			{ description: { contains: search, mode: "insensitive" } },
+		where.AND = [
+			{ customerId: tenant.customerId },
+			{
+				OR: [
+					{ name: { contains: search, mode: "insensitive" } },
+					{ description: { contains: search, mode: "insensitive" } },
+				],
+			},
 		];
+		delete where.customerId;
 	}
 
 	const [items, total] = await Promise.all([
@@ -30,25 +38,35 @@ export async function list(params: ListParams): Promise<PaginatedItems> {
 	return { items, total, skip, limit };
 }
 
-export async function create(data: ItemCreate) {
-	const existing = await prisma.item.findFirst({ where: { name: data.name } });
+export async function create(tenant: TenantContext, data: ItemCreate) {
+	const existing = await prisma.item.findFirst({
+		where: { name: data.name, customerId: tenant.customerId },
+	});
 	if (existing) throw new AlreadyExistsError("Item", data.name);
 
-	return prisma.item.create({ data });
+	return prisma.item.create({
+		data: {
+			...data,
+			customerId: tenant.customerId,
+			userId: tenant.userId,
+		},
+	});
 }
 
-export async function getById(id: string) {
-	const item = await prisma.item.findUnique({ where: { id } });
+export async function getById(tenant: TenantContext, id: string) {
+	const item = await prisma.item.findFirst({
+		where: { id, customerId: tenant.customerId },
+	});
 	if (!item) throw new NotFoundError("Item", id);
 	return item;
 }
 
-export async function update(id: string, data: ItemUpdate) {
-	await getById(id);
+export async function update(tenant: TenantContext, id: string, data: ItemUpdate) {
+	await getById(tenant, id);
 
 	if (data.name) {
 		const existing = await prisma.item.findFirst({
-			where: { name: data.name, NOT: { id } },
+			where: { name: data.name, customerId: tenant.customerId, NOT: { id } },
 		});
 		if (existing) throw new AlreadyExistsError("Item", data.name);
 	}
@@ -56,7 +74,7 @@ export async function update(id: string, data: ItemUpdate) {
 	return prisma.item.update({ where: { id }, data });
 }
 
-export async function remove(id: string) {
-	await getById(id);
+export async function remove(tenant: TenantContext, id: string) {
+	await getById(tenant, id);
 	await prisma.item.delete({ where: { id } });
 }

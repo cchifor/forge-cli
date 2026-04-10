@@ -7,6 +7,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::errors::AppError;
+use crate::middleware::tenant::TenantContext;
 use crate::models::{CreateItem, ListParams, UpdateItem};
 use crate::services::item_service;
 
@@ -21,41 +22,46 @@ pub fn routes() -> Router<PgPool> {
 
 async fn list_items(
     State(pool): State<PgPool>,
+    tenant: TenantContext,
     Query(params): Query<ListParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result = item_service::list(&pool, params).await?;
+    let result = item_service::list(&pool, &tenant, params).await?;
     Ok(Json(result))
 }
 
 async fn create_item(
     State(pool): State<PgPool>,
+    tenant: TenantContext,
     Json(body): Json<CreateItem>,
 ) -> Result<impl IntoResponse, AppError> {
-    let item = item_service::create(&pool, body).await?;
+    let item = item_service::create(&pool, &tenant, body).await?;
     Ok((StatusCode::CREATED, Json(item)))
 }
 
 async fn get_item(
     State(pool): State<PgPool>,
+    tenant: TenantContext,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let item = item_service::get_by_id(&pool, id).await?;
+    let item = item_service::get_by_id(&pool, &tenant, id).await?;
     Ok(Json(item))
 }
 
 async fn update_item(
     State(pool): State<PgPool>,
+    tenant: TenantContext,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateItem>,
 ) -> Result<impl IntoResponse, AppError> {
-    let item = item_service::update(&pool, id, body).await?;
+    let item = item_service::update(&pool, &tenant, id, body).await?;
     Ok(Json(item))
 }
 
 async fn delete_item(
     State(pool): State<PgPool>,
+    tenant: TenantContext,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    item_service::delete(&pool, id).await?;
+    item_service::delete(&pool, &tenant, id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

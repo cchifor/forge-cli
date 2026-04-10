@@ -15,6 +15,8 @@ enum ItemStatus {
 
 model Item {
   id          String     @id @default(uuid())
+  customerId  String     @map("customer_id")
+  userId      String     @map("user_id")
   name        String     @db.VarChar(255)
   description String?
   tags        String[]   @default([])
@@ -22,6 +24,8 @@ model Item {
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
+  @@index([customerId, name], map: "ix_items_customer_name")
+  @@index([customerId, status], map: "ix_items_customer_status")
   @@map("items")
 }
 

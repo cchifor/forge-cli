@@ -2,18 +2,20 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::errors::AppError;
+use crate::middleware::tenant::TenantContext;
 use crate::models::{CreateItem, Item, ListParams, PaginatedResponse, UpdateItem};
 
 pub async fn list(
     pool: &PgPool,
+    tenant: &TenantContext,
     params: ListParams,
 ) -> Result<PaginatedResponse<Item>, AppError> {
     let skip = params.skip.unwrap_or(0);
     let limit = params.limit.unwrap_or(20).min(100);
 
-    // Build dynamic query based on filters
-    let mut conditions = Vec::new();
-    let mut bind_idx = 0u32;
+    // Build dynamic query — always scoped by customer_id
+    let mut conditions = vec!["customer_id = $1".to_string()];
+    let mut bind_idx = 1u32;
 
     if params.status.is_some() {
         bind_idx += 1;
@@ -29,11 +31,7 @@ pub async fn list(
         ));
     }
 
-    let where_clause = if conditions.is_empty() {
-        String::new()
-    } else {
-        format!("WHERE {}", conditions.join(" AND "))
-    };
+    let where_clause = format!("WHERE {}", conditions.join(" AND "));
 
     let count_sql = format!("SELECT COUNT(*) as count FROM items {where_clause}");
     let query_sql = format!(
@@ -44,6 +42,7 @@ pub async fn list(
 
     // Build and execute count query
     let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
+    count_query = count_query.bind(tenant.customer_id);
     if let Some(ref status) = params.status {
         count_query = count_query.bind(status);
     }
@@ -55,6 +54,7 @@ pub async fn list(
 
     // Build and execute items query
     let mut items_query = sqlx::query_as::<_, Item>(&query_sql);
+    items_query = items_query.bind(tenant.customer_id);
     if let Some(ref status) = params.status {
         items_query = items_query.bind(status);
     }
@@ -73,13 +73,17 @@ pub async fn list(
     })
 }
 
-pub async fn create(pool: &PgPool, data: CreateItem) -> Result<Item, AppError> {
+pub async fn create(
+    pool: &PgPool,
+    tenant: &TenantContext,
+    data: CreateItem,
+) -> Result<Item, AppError> {
     // Check for duplicate name within the same customer
     let existing = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM items WHERE name = $1 AND customer_id = $2",
     )
     .bind(&data.name)
-    .bind(data.customer_id)
+    .bind(tenant.customer_id)
     .fetch_one(pool)
     .await?;
 
@@ -101,34 +105,46 @@ pub async fn create(pool: &PgPool, data: CreateItem) -> Result<Item, AppError> {
     .bind(&data.description)
     .bind(&tags)
     .bind(&status)
-    .bind(data.customer_id)
-    .bind(data.user_id)
+    .bind(tenant.customer_id)
+    .bind(tenant.user_id)
     .fetch_one(pool)
     .await?;
 
     Ok(item)
 }
 
-pub async fn get_by_id(pool: &PgPool, id: Uuid) -> Result<Item, AppError> {
-    let item = sqlx::query_as::<_, Item>("SELECT * FROM items WHERE id = $1")
-        .bind(id)
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AppError::not_found("Item", id.to_string()))?;
+pub async fn get_by_id(
+    pool: &PgPool,
+    tenant: &TenantContext,
+    id: Uuid,
+) -> Result<Item, AppError> {
+    let item =
+        sqlx::query_as::<_, Item>("SELECT * FROM items WHERE id = $1 AND customer_id = $2")
+            .bind(id)
+            .bind(tenant.customer_id)
+            .fetch_optional(pool)
+            .await?
+            .ok_or_else(|| AppError::not_found("Item", id.to_string()))?;
 
     Ok(item)
 }
 
-pub async fn update(pool: &PgPool, id: Uuid, data: UpdateItem) -> Result<Item, AppError> {
-    // Ensure item exists
-    get_by_id(pool, id).await?;
+pub async fn update(
+    pool: &PgPool,
+    tenant: &TenantContext,
+    id: Uuid,
+    data: UpdateItem,
+) -> Result<Item, AppError> {
+    // Ensure item exists and belongs to this tenant
+    get_by_id(pool, tenant, id).await?;
 
     // Check for duplicate name if name is being updated
     if let Some(ref name) = data.name {
         let existing = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM items WHERE name = $1 AND id != $2",
+            "SELECT COUNT(*) FROM items WHERE name = $1 AND customer_id = $2 AND id != $3",
         )
         .bind(name)
+        .bind(tenant.customer_id)
         .bind(id)
         .fetch_one(pool)
         .await?;
@@ -160,7 +176,7 @@ pub async fn update(pool: &PgPool, id: Uuid, data: UpdateItem) -> Result<Item, A
     }
 
     if sets.is_empty() {
-        return get_by_id(pool, id).await;
+        return get_by_id(pool, tenant, id).await;
     }
 
     sets.push("updated_at = NOW()".to_string());
@@ -191,12 +207,13 @@ pub async fn update(pool: &PgPool, id: Uuid, data: UpdateItem) -> Result<Item, A
     Ok(item)
 }
 
-pub async fn delete(pool: &PgPool, id: Uuid) -> Result<(), AppError> {
-    // Ensure item exists
-    get_by_id(pool, id).await?;
+pub async fn delete(pool: &PgPool, tenant: &TenantContext, id: Uuid) -> Result<(), AppError> {
+    // Ensure item exists and belongs to this tenant
+    get_by_id(pool, tenant, id).await?;
 
-    sqlx::query("DELETE FROM items WHERE id = $1")
+    sqlx::query("DELETE FROM items WHERE id = $1 AND customer_id = $2")
         .bind(id)
+        .bind(tenant.customer_id)
         .execute(pool)
         .await?;
 

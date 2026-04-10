@@ -7,6 +7,8 @@ CREATE TYPE "TaskStatus" AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', '
 -- CreateTable
 CREATE TABLE "items" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "customer_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "description" TEXT,
     "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
@@ -15,6 +17,12 @@ CREATE TABLE "items" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "items_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE INDEX "ix_items_customer_name" ON "items"("customer_id", "name");
+
+-- CreateIndex
+CREATE INDEX "ix_items_customer_status" ON "items"("customer_id", "status");
 
 -- CreateTable
 CREATE TABLE "background_tasks" (

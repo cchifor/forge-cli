@@ -7,6 +7,8 @@ export async function requestLogger(req: FastifyRequest, reply: FastifyReply) {
 		url: req.url,
 		statusCode: reply.statusCode,
 		correlationId: req.correlationId,
+		customerId: req.tenant?.customerId,
+		userId: req.tenant?.userId,
 		responseTime: reply.elapsedTime,
 	});
 }

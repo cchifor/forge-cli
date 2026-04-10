@@ -22,6 +22,8 @@ export type ItemUpdate = z.infer<typeof ItemUpdate>;
 
 export const Item = z.object({
 	id: z.string().uuid(),
+	customerId: z.string(),
+	userId: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
 	tags: z.array(z.string()),

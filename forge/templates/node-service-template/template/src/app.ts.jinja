@@ -5,6 +5,7 @@ import { homeRoutes } from "./routes/home.js";
 import { itemRoutes } from "./routes/items.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { correlationHook } from "./middleware/correlation.js";
+import { tenantHook } from "./middleware/tenant.js";
 import { requestLogger } from "./middleware/logging.js";
 
 export async function buildApp() {
@@ -13,6 +14,7 @@ export async function buildApp() {
 	await app.register(cors);
 
 	app.addHook("onRequest", correlationHook);
+	app.addHook("onRequest", tenantHook);
 	app.addHook("onResponse", requestLogger);
 	app.setErrorHandler(errorHandler);
 

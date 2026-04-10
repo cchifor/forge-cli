@@ -119,6 +119,21 @@ class ServiceClient:
             if correlation_id:
                 headers[CORRELATION_HEADER] = correlation_id
 
+            # Propagate tenant context for S2S calls
+            from service.core.context import get_customer_id, get_user_id  # noqa: E402
+            try:
+                customer_id = get_customer_id()
+                if customer_id and customer_id != "public":
+                    headers["x-customer-id"] = customer_id
+            except (ValueError, LookupError):
+                pass
+            try:
+                user_id = get_user_id()
+                if user_id and user_id != "anonymous":
+                    headers["x-gatekeeper-user-id"] = user_id
+            except (ValueError, LookupError):
+                pass
+
             # Attach auth token
             if self._auth:
                 token = await self._auth.get_token(self.client)

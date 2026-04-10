@@ -22,8 +22,6 @@ pub struct CreateItem {
     pub description: Option<String>,
     pub tags: Option<serde_json::Value>,
     pub status: Option<String>,
-    pub customer_id: Uuid,
-    pub user_id: Uuid,
 }
 
 #[derive(Debug, Deserialize)]

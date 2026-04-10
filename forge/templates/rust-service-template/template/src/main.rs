@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use tracing_subscriber::EnvFilter;
 
 mod app;
+mod client;
 mod config;
 mod db;
 mod errors;
