@@ -1,9 +1,9 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import * as path from 'path';
+import path from 'node:path';
 
 export type Persona = 'admin' | 'user';
 
-const AUTH_DIR = path.join(__dirname, '..', '..', '.auth');
+const AUTH_DIR = path.resolve(__dirname, '..', '..', '.auth');
 
 export class AuthManager {
   constructor(

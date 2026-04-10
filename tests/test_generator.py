@@ -187,7 +187,7 @@ class TestGenerateE2eTests:
         project_root.mkdir()
 
         with patch("forge.generator.run_copy") as mock_copy:
-            result = _generate_e2e_tests(config, project_root)
+            _generate_e2e_tests(config, project_root)
 
         mock_copy.assert_called_once()
         call_kwargs = mock_copy.call_args.kwargs

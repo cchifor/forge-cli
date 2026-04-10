@@ -76,12 +76,12 @@ def main() -> None:
         gitkeep.unlink()
 
     # 6. Install npm dependencies (skip gracefully if Node.js not available)
-    pkg_json = project_dir / "e2e-platform" / "package.json"
+    pkg_json = project_dir / "package.json"
     if pkg_json.exists():
         try:
             subprocess.run(
                 ["npm", "install"],
-                cwd=str(project_dir / "e2e-platform"),
+                cwd=str(project_dir),
                 capture_output=True,
                 timeout=120,
             )

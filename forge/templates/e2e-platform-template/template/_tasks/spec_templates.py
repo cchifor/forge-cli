@@ -46,59 +46,59 @@ test.describe('{Singular} Detail', () => {{
 """
 
 AUTH_SPEC_TEMPLATE = """\
-import {{ test, expect }} from '../e2e-platform/fixtures/app';
+import { test, expect } from '../e2e-platform/fixtures/app';
 
-test.describe('Login', () => {{
-  test('unauthenticated redirects to Keycloak', async ({{ app }}) => {{
+test.describe('Login', () => {
+  test('unauthenticated redirects to Keycloak', async ({ app }) => {
     await app.nav.goToDashboard();
     await app.page.waitForSelector(
       '#username, #email, input[name="username"]',
-      {{ timeout: 15000 }},
+      { timeout: 15000 },
     );
     const url = app.page.url();
     expect(
       url.includes('auth') || url.includes('realms') || url.includes('login'),
     ).toBeTruthy();
-  }});
+  });
 
-  test('login with valid credentials', async ({{ app }}) => {{
+  test('login with valid credentials', async ({ app }) => {
     await app.nav.goToDashboard();
-    await app.page.waitForSelector('#username, input[name="username"]', {{
+    await app.page.waitForSelector('#username, input[name="username"]', {
       timeout: 15000,
-    }});
+    });
     await app.page.fill('#username, input[name="username"]', process.env.TEST_USER || 'dev@localhost');
     await app.page.fill('#password, input[name="password"]', process.env.TEST_PASSWORD || 'devpass');
     await app.page.click('#kc-login, input[type="submit"]');
     await app.page.waitForTimeout(3000);
     expect(app.page.url()).not.toContain('realms');
-  }});
+  });
 
-  test('login with invalid credentials', async ({{ app }}) => {{
+  test('login with invalid credentials', async ({ app }) => {
     await app.nav.goToDashboard();
-    await app.page.waitForSelector('#username, input[name="username"]', {{
+    await app.page.waitForSelector('#username, input[name="username"]', {
       timeout: 15000,
-    }});
+    });
     await app.page.fill('#username, input[name="username"]', 'wrong@localhost');
     await app.page.fill('#password, input[name="password"]', 'wrongpassword');
     await app.page.click('#kc-login, input[type="submit"]');
     await app.page.waitForTimeout(2000);
     const error = app.page.locator('#input-error, .kc-feedback-text, .alert-error');
-    await expect(error.first()).toBeVisible({{ timeout: 5000 }});
-  }});
-}});
+    await expect(error.first()).toBeVisible({ timeout: 5000 });
+  });
+});
 
-test.describe('Protected Access', () => {{
-  test('authenticated user sees content', async ({{ app }}) => {{
+test.describe('Protected Access', () => {
+  test('authenticated user sees content', async ({ app }) => {
     await app.auth.loginAs('user');
     await app.nav.goToDashboard();
     await app.page.waitForTimeout(2000);
     const content = await app.page.content();
     expect(content.length).toBeGreaterThan(500);
-  }});
-}});
+  });
+});
 
-test.describe('Logout', () => {{
-  test('logout ends session', async ({{ app }}) => {{
+test.describe('Logout', () => {
+  test('logout ends session', async ({ app }) => {
     await app.auth.loginAs('user');
     await app.auth.logout();
     await app.nav.goToDashboard();
@@ -107,6 +107,6 @@ test.describe('Logout', () => {{
     expect(
       url.includes('auth') || url.includes('realms') || url.includes('login'),
     ).toBeTruthy();
-  }});
-}});
+  });
+});
 """

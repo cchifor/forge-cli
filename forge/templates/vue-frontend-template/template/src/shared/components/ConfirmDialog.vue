@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from '@/shared/ui/dialog'
-import { Button } from '@/shared/ui/button'
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog'
+import { buttonVariants } from '@/shared/ui/button/variants'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     open: boolean
     title?: string
@@ -31,36 +32,25 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:open': [value: boolean]
   confirm: []
-  cancel: []
 }>()
-
-function handleConfirm() {
-  emit('confirm')
-}
-
-function handleCancel() {
-  emit('cancel')
-  emit('update:open', false)
-}
 </script>
 
 <template>
-  <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{{ title }}</DialogTitle>
-        <DialogDescription>{{ description }}</DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <DialogClose as-child>
-          <Button variant="outline" @click="handleCancel">
-            {{ cancelLabel }}
-          </Button>
-        </DialogClose>
-        <Button :variant="variant" @click="handleConfirm">
+  <AlertDialog :open="open" @update:open="emit('update:open', $event)">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ title }}</AlertDialogTitle>
+        <AlertDialogDescription>{{ description }}</AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>{{ cancelLabel }}</AlertDialogCancel>
+        <AlertDialogAction
+          :class="buttonVariants({ variant })"
+          @click="emit('confirm')"
+        >
           {{ confirmLabel }}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
