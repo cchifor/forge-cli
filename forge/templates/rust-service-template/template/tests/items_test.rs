@@ -72,15 +72,15 @@ async fn list_items_returns_paginated() {
 async fn create_item_returns_201() {
     let app = build_mock_router();
 
+    // customer_id and user_id are no longer in the request body —
+    // they are injected from TenantContext (Gatekeeper headers)
     let request = Request::builder()
         .method("POST")
         .uri("/api/v1/items")
         .header("content-type", "application/json")
         .body(Body::from(
             serde_json::json!({
-                "name": "Test Item",
-                "customer_id": "550e8400-e29b-41d4-a716-446655440001",
-                "user_id": "550e8400-e29b-41d4-a716-446655440002"
+                "name": "Test Item"
             })
             .to_string(),
         ))

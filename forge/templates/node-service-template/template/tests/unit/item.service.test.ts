@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../src/lib/prisma.js";
 import * as itemService from "../../src/services/item.service.js";
 import { NotFoundError, AlreadyExistsError } from "../../src/lib/errors.js";
+import type { TenantContext } from "../../src/middleware/tenant.js";
 
 vi.mock("../../src/lib/prisma.js", () => ({
 	prisma: {
 		item: {
 			findMany: vi.fn(),
 			findFirst: vi.fn(),
-			findUnique: vi.fn(),
 			create: vi.fn(),
 			update: vi.fn(),
 			delete: vi.fn(),
@@ -17,8 +17,17 @@ vi.mock("../../src/lib/prisma.js", () => ({
 	},
 }));
 
+const tenant: TenantContext = {
+	userId: "00000000-0000-0000-0000-000000000001",
+	email: "test@localhost",
+	customerId: "00000000-0000-0000-0000-000000000001",
+	roles: ["user", "admin"],
+};
+
 const mockItem = {
 	id: "550e8400-e29b-41d4-a716-446655440000",
+	customerId: tenant.customerId,
+	userId: tenant.userId,
 	name: "Test Item",
 	description: null,
 	tags: [],
@@ -33,91 +42,132 @@ describe("ItemService", () => {
 	});
 
 	describe("list", () => {
-		it("returns paginated items", async () => {
+		it("returns paginated items scoped to tenant", async () => {
 			vi.mocked(prisma.item.findMany).mockResolvedValue([mockItem]);
 			vi.mocked(prisma.item.count).mockResolvedValue(1);
 
-			const result = await itemService.list({ skip: 0, limit: 50 });
+			const result = await itemService.list({ tenant, skip: 0, limit: 50 });
 
 			expect(result.items).toHaveLength(1);
 			expect(result.total).toBe(1);
-			expect(result.skip).toBe(0);
-			expect(result.limit).toBe(50);
+			expect(prisma.item.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({ customerId: tenant.customerId }),
+				}),
+			);
 		});
 
-		it("applies status filter", async () => {
+		it("applies status filter within tenant scope", async () => {
 			vi.mocked(prisma.item.findMany).mockResolvedValue([]);
 			vi.mocked(prisma.item.count).mockResolvedValue(0);
 
-			await itemService.list({ skip: 0, limit: 50, status: "ACTIVE" });
+			await itemService.list({ tenant, skip: 0, limit: 50, status: "ACTIVE" });
 
 			expect(prisma.item.findMany).toHaveBeenCalledWith(
 				expect.objectContaining({
-					where: expect.objectContaining({ status: "ACTIVE" }),
+					where: expect.objectContaining({
+						customerId: tenant.customerId,
+						status: "ACTIVE",
+					}),
 				}),
 			);
 		});
 	});
 
 	describe("create", () => {
-		it("creates an item when name is unique", async () => {
+		it("creates item with tenant context auto-injected", async () => {
 			vi.mocked(prisma.item.findFirst).mockResolvedValue(null);
 			vi.mocked(prisma.item.create).mockResolvedValue(mockItem);
 
-			const result = await itemService.create({
+			const result = await itemService.create(tenant, {
 				name: "Test Item",
 				tags: [],
 				status: "DRAFT",
 			});
 
 			expect(result).toEqual(mockItem);
+			expect(prisma.item.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						customerId: tenant.customerId,
+						userId: tenant.userId,
+						name: "Test Item",
+					}),
+				}),
+			);
 		});
 
-		it("throws AlreadyExistsError for duplicate name", async () => {
+		it("checks duplicate name within same tenant only", async () => {
 			vi.mocked(prisma.item.findFirst).mockResolvedValue(mockItem);
 
 			await expect(
-				itemService.create({ name: "Test Item", tags: [], status: "DRAFT" }),
+				itemService.create(tenant, { name: "Test Item", tags: [], status: "DRAFT" }),
 			).rejects.toThrow(AlreadyExistsError);
+
+			// Verify duplicate check includes customerId
+			expect(prisma.item.findFirst).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { name: "Test Item", customerId: tenant.customerId },
+				}),
+			);
 		});
 	});
 
 	describe("getById", () => {
-		it("returns item when found", async () => {
-			vi.mocked(prisma.item.findUnique).mockResolvedValue(mockItem);
-			const result = await itemService.getById(mockItem.id);
+		it("returns item scoped to tenant", async () => {
+			vi.mocked(prisma.item.findFirst).mockResolvedValue(mockItem);
+
+			const result = await itemService.getById(tenant, mockItem.id);
+
 			expect(result).toEqual(mockItem);
+			expect(prisma.item.findFirst).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { id: mockItem.id, customerId: tenant.customerId },
+				}),
+			);
 		});
 
-		it("throws NotFoundError when not found", async () => {
-			vi.mocked(prisma.item.findUnique).mockResolvedValue(null);
-			await expect(itemService.getById("nonexistent")).rejects.toThrow(NotFoundError);
+		it("throws NotFoundError when item belongs to different tenant", async () => {
+			vi.mocked(prisma.item.findFirst).mockResolvedValue(null);
+
+			await expect(itemService.getById(tenant, "other-id")).rejects.toThrow(NotFoundError);
 		});
 	});
 
 	describe("update", () => {
-		it("updates an item", async () => {
+		it("updates item within tenant scope", async () => {
 			const updated = { ...mockItem, name: "Updated" };
-			vi.mocked(prisma.item.findUnique).mockResolvedValue(mockItem);
-			vi.mocked(prisma.item.findFirst).mockResolvedValue(null);
+			vi.mocked(prisma.item.findFirst).mockResolvedValueOnce(mockItem); // getById
+			vi.mocked(prisma.item.findFirst).mockResolvedValueOnce(null); // dupe check
 			vi.mocked(prisma.item.update).mockResolvedValue(updated);
 
-			const result = await itemService.update(mockItem.id, { name: "Updated" });
+			const result = await itemService.update(tenant, mockItem.id, { name: "Updated" });
 			expect(result.name).toBe("Updated");
+		});
+
+		it("checks duplicate name within same tenant on update", async () => {
+			const duplicate = { ...mockItem, id: "other-id" };
+			vi.mocked(prisma.item.findFirst).mockResolvedValueOnce(mockItem); // getById
+			vi.mocked(prisma.item.findFirst).mockResolvedValueOnce(duplicate); // dupe check
+
+			await expect(
+				itemService.update(tenant, mockItem.id, { name: "Taken" }),
+			).rejects.toThrow(AlreadyExistsError);
 		});
 	});
 
 	describe("remove", () => {
-		it("deletes an existing item", async () => {
-			vi.mocked(prisma.item.findUnique).mockResolvedValue(mockItem);
+		it("deletes item within tenant scope", async () => {
+			vi.mocked(prisma.item.findFirst).mockResolvedValue(mockItem);
 			vi.mocked(prisma.item.delete).mockResolvedValue(mockItem);
 
-			await expect(itemService.remove(mockItem.id)).resolves.not.toThrow();
+			await expect(itemService.remove(tenant, mockItem.id)).resolves.not.toThrow();
 		});
 
-		it("throws NotFoundError when item does not exist", async () => {
-			vi.mocked(prisma.item.findUnique).mockResolvedValue(null);
-			await expect(itemService.remove("nonexistent")).rejects.toThrow(NotFoundError);
+		it("throws NotFoundError for item not in tenant", async () => {
+			vi.mocked(prisma.item.findFirst).mockResolvedValue(null);
+
+			await expect(itemService.remove(tenant, "nonexistent")).rejects.toThrow(NotFoundError);
 		});
 	});
 });
