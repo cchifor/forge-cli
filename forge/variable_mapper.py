@@ -56,6 +56,7 @@ def _build_backend_features_json(config: ProjectConfig) -> str:
         mapping[bc.name] = {
             "port": bc.server_port,
             "features": bc.features,
+            "language": bc.language.value,
         }
     return json.dumps(mapping)
 

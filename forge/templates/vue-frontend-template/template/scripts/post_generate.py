@@ -410,12 +410,15 @@ def main() -> None:
     print(f"  Setting up: {PROJECT_NAME}")
     print("=" * 60)
 
-    # Build feature list with backend_name mapping
+    # Build feature list with backend_name and language mapping
     feature_backend_map: dict[str, str] = {}
+    feature_language_map: dict[str, str] = {}
     if BACKEND_FEATURES:
         for backend_name, info in BACKEND_FEATURES.items():
+            lang = info.get("language", "python")
             for feat in info.get("features", []):
                 feature_backend_map[feat.strip()] = backend_name
+                feature_language_map[feat.strip()] = lang
 
     # Fallback: parse from flat features string if no backend mapping
     features = [f.strip() for f in FEATURES_RAW.split(",") if f.strip()]
@@ -423,11 +426,15 @@ def main() -> None:
         default_backend = "backend"
         for feat in features:
             feature_backend_map[feat] = default_backend
+            feature_language_map[feat] = "python"
 
     print("\n> Generating features")
     for name in features:
         ctx = make_feature_context(name)
         ctx["backend_name"] = feature_backend_map.get(name, "backend")
+        ctx["backend_language"] = feature_language_map.get(name, "python")
+        ctx["ts_created"] = "createdAt" if ctx["backend_language"] == "node" else "created_at"
+        ctx["ts_updated"] = "updatedAt" if ctx["backend_language"] == "node" else "updated_at"
         generate_feature(ctx)
         generate_msw_handlers(ctx)
         inject_feature_into_hubs(ctx)

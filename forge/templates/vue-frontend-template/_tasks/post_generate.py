@@ -406,6 +406,8 @@ def main() -> None:
     print("\n> Generating features")
     for name in features:
         ctx = make_feature_context(name)
+        ctx["ts_created"] = "created_at"
+        ctx["ts_updated"] = "updated_at"
         generate_feature(ctx)
         generate_msw_handlers(ctx)
         inject_feature_into_hubs(ctx)

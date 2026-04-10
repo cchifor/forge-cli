@@ -169,8 +169,8 @@ export const {singular}Schema = z.object({{
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
-  created_at: z.string().nullable(),
-  updated_at: z.string().nullable(),
+  {ts_created}: z.string().nullable(),
+  {ts_updated}: z.string().nullable(),
 }})
 
 export const paginated{Singular}ResponseSchema = paginatedResponseSchema({singular}Schema)
@@ -191,8 +191,8 @@ describe('{singular}Schema', () => {{
     id: '00000000-0000-0000-0000-000000000001',
     name: 'Test {Singular}',
     description: null,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: null,
+    {ts_created}: '2026-01-01T00:00:00Z',
+    {ts_updated}: null,
   }}
 
   it('parses a valid {singular}', () => {{
@@ -214,8 +214,8 @@ describe('paginated{Singular}ResponseSchema', () => {{
         id: '00000000-0000-0000-0000-000000000001',
         name: '{Singular}',
         description: null,
-        created_at: null,
-        updated_at: null,
+        {ts_created}: null,
+        {ts_updated}: null,
       }}],
       total: 1,
       skip: 0,
@@ -593,8 +593,8 @@ function formatDate(dateStr: string | null): string {{
           <div><dt class="text-xs text-muted-foreground">Name</dt><dd class="text-sm font-medium">{{{{ {singular}.name }}}}</dd></div>
           <div><dt class="text-xs text-muted-foreground">Description</dt><dd class="text-sm">{{{{ {singular}.description || 'No description' }}}}</dd></div>
           <div class="grid grid-cols-2 gap-4">
-            <div><dt class="text-xs text-muted-foreground">Created</dt><dd class="text-sm">{{{{ formatDate({singular}.created_at) }}}}</dd></div>
-            <div><dt class="text-xs text-muted-foreground">Updated</dt><dd class="text-sm">{{{{ formatDate({singular}.updated_at) }}}}</dd></div>
+            <div><dt class="text-xs text-muted-foreground">Created</dt><dd class="text-sm">{{{{ formatDate({singular}.{ts_created}) }}}}</dd></div>
+            <div><dt class="text-xs text-muted-foreground">Updated</dt><dd class="text-sm">{{{{ formatDate({singular}.{ts_updated}) }}}}</dd></div>
           </div>
         </dl>
       </CardContent>
@@ -640,15 +640,15 @@ const mock{Plural} = [
     id: '00000000-0000-0000-0000-000000000010',
     name: 'Test {Singular} 1',
     description: 'First test {singular}',
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: null,
+    {ts_created}: '2026-01-01T00:00:00Z',
+    {ts_updated}: null,
   }},
   {{
     id: '00000000-0000-0000-0000-000000000020',
     name: 'Test {Singular} 2',
     description: null,
-    created_at: '2026-02-01T00:00:00Z',
-    updated_at: null,
+    {ts_created}: '2026-02-01T00:00:00Z',
+    {ts_updated}: null,
   }},
 ]
 
@@ -692,8 +692,8 @@ export const {plural}Handlers = [
         id: '00000000-0000-0000-0000-000000000099',
         name: body.name,
         description: body.description ?? null,
-        created_at: new Date().toISOString(),
-        updated_at: null,
+        {ts_created}: new Date().toISOString(),
+        {ts_updated}: null,
       }},
       {{ status: 201 }},
     )
