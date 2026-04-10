@@ -216,6 +216,35 @@ services:
     networks:
       - app-network
 
+{% if has_frontend %}
+  # ── E2E Tests (on-demand: docker compose --profile test run e2e) ──
+  e2e:
+    build:
+      context: ./{{ project_slug }}-e2e
+      dockerfile: Dockerfile
+    environment:
+      BASE_URL: "http://frontend:80"
+      CI: "true"
+{% if include_keycloak %}
+      KEYCLOAK_URL: "http://keycloak:8080"
+      KEYCLOAK_REALM: "{{ keycloak_realm }}"
+      TEST_USER: "dev@localhost"
+      TEST_PASSWORD: "devpass"
+{% endif %}
+    depends_on:
+      - frontend
+{% for be in backends %}
+      - {{ be.name }}
+{% endfor %}
+{% if include_keycloak %}
+      - gatekeeper
+{% endif %}
+    networks:
+      - app-network
+    profiles:
+      - test
+{% endif %}
+
 volumes:
   pgdata:
 {% if include_keycloak %}

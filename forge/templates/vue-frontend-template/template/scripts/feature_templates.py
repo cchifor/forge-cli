@@ -307,13 +307,13 @@ function formatDate(dateStr: string | null): string {{
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4" data-test="{plural}-list">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">{Plural}</h1>
         <p class="text-muted-foreground">Manage your {plural}</p>
       </div>
-      <Button @click="router.push('/{plural}/new')">
+      <Button data-test="{plural}-create-btn" @click="router.push('/{plural}/new')">
         <Plus class="mr-2 h-4 w-4" />
         New {Singular}
       </Button>
@@ -322,7 +322,7 @@ function formatDate(dateStr: string | null): string {{
     <!-- Search -->
     <div class="relative max-w-sm">
       <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-      <Input v-model="searchInput" placeholder="Search {plural}..." class="pl-8" />
+      <Input v-model="searchInput" data-test="{plural}-search-input" placeholder="Search {plural}..." class="pl-8" />
       <button
         v-if="searchInput"
         class="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
@@ -358,12 +358,13 @@ function formatDate(dateStr: string | null): string {{
       <Card
         v-for="{singular} in data.items"
         :key="{singular}.id"
+        data-test="{singular}-card"
         class="interactive-press cursor-pointer"
         @click="router.push(`/{plural}/${{{singular}.id}}`)"
       >
         <CardContent class="p-4">
           <div class="flex items-center justify-between">
-            <span class="font-medium">{{{{ {singular}.name }}}}</span>
+            <span class="font-medium" data-test="{singular}-name">{{{{ {singular}.name }}}}</span>
             <div class="flex items-center gap-2" @click.stop>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
@@ -379,6 +380,7 @@ function formatDate(dateStr: string | null): string {{
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     class="text-destructive"
+                    data-test="{singular}-delete-btn"
                     @click="confirmDelete({{ id: {singular}.id, name: {singular}.name }})"
                   >
                     <Trash2 class="mr-2 h-4 w-4" />
@@ -398,7 +400,7 @@ function formatDate(dateStr: string | null): string {{
     <!-- Pagination -->
     <div v-if="data && data.total > 0" class="flex items-center justify-between text-sm text-muted-foreground">
       <p>Showing {{{{ data.skip + 1 }}}}-{{{{ Math.min(data.skip + data.limit, data.total) }}}} of {{{{ data.total }}}}</p>
-      <Button v-if="data.has_more" variant="outline" size="sm" @click="page++">
+      <Button v-if="data.has_more" data-test="{plural}-load-more" variant="outline" size="sm" @click="page++">
         Load More
       </Button>
     </div>
@@ -477,16 +479,16 @@ function handleSubmit() {{
       <CardContent class="space-y-4">
         <div class="space-y-2">
           <Label for="name">Name *</Label>
-          <Input id="name" v-model="name" placeholder="Enter name" required />
+          <Input id="name" v-model="name" data-test="{singular}-name-input" placeholder="Enter name" required />
         </div>
         <div class="space-y-2">
           <Label for="description">Description</Label>
-          <Textarea id="description" v-model="description" placeholder="Enter description" :rows="3" />
+          <Textarea id="description" v-model="description" data-test="{singular}-description-input" placeholder="Enter description" :rows="3" />
         </div>
       </CardContent>
       <CardFooter class="gap-2">
-        <Button variant="outline" @click="router.push('/{plural}')">Cancel</Button>
-        <Button :disabled="create{Singular}.isPending.value" @click="handleSubmit">
+        <Button variant="outline" data-test="{singular}-cancel-btn" @click="router.push('/{plural}')">Cancel</Button>
+        <Button data-test="{singular}-submit-btn" :disabled="create{Singular}.isPending.value" @click="handleSubmit">
           <Loader2 v-if="create{Singular}.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
           {{{{ create{Singular}.isPending.value ? 'Creating...' : 'Create {Singular}' }}}}
         </Button>
@@ -578,15 +580,15 @@ function formatDate(dateStr: string | null): string {{
         <h1 class="text-3xl font-bold tracking-tight">{Singular} Detail</h1>
       </div>
       <template v-if="{singular} && !editing">
-        <Button variant="outline" @click="startEdit"><Pencil class="mr-2 h-4 w-4" />Edit</Button>
-        <Button variant="destructive" @click="deleteDialogOpen = true"><Trash2 class="mr-2 h-4 w-4" />Delete</Button>
+        <Button variant="outline" data-test="{singular}-edit-btn" @click="startEdit"><Pencil class="mr-2 h-4 w-4" />Edit</Button>
+        <Button variant="destructive" data-test="{singular}-delete-btn" @click="deleteDialogOpen = true"><Trash2 class="mr-2 h-4 w-4" />Delete</Button>
       </template>
     </div>
 
     <Card v-if="isLoading"><CardContent class="space-y-4 pt-6"><Skeleton class="h-8 w-48" /><Skeleton class="h-4 w-full" /></CardContent></Card>
     <Card v-else-if="isError"><CardContent class="pt-6 text-center text-muted-foreground">Failed to load.</CardContent></Card>
 
-    <Card v-else-if="{singular} && !editing" class="max-w-2xl">
+    <Card v-else-if="{singular} && !editing" data-test="{singular}-detail" class="max-w-2xl">
       <CardHeader><CardTitle>Summary</CardTitle></CardHeader>
       <CardContent>
         <dl class="space-y-3">
@@ -604,13 +606,13 @@ function formatDate(dateStr: string | null): string {{
       <CardHeader><CardTitle>Edit {Singular}</CardTitle></CardHeader>
       <CardContent>
         <form class="space-y-4" @submit.prevent="saveEdit">
-          <div class="space-y-2"><Label>Name *</Label><Input v-model="editName" required /></div>
+          <div class="space-y-2"><Label>Name *</Label><Input v-model="editName" data-test="{singular}-edit-name-input" required /></div>
           <div class="space-y-2"><Label>Description</Label><Textarea v-model="editDescription" :rows="3" /></div>
         </form>
       </CardContent>
       <CardFooter class="gap-2">
-        <Button variant="outline" @click="cancelEdit"><X class="mr-2 h-4 w-4" />Cancel</Button>
-        <Button :disabled="update{Singular}.isPending.value" @click="saveEdit">
+        <Button variant="outline" data-test="{singular}-cancel-edit-btn" @click="cancelEdit"><X class="mr-2 h-4 w-4" />Cancel</Button>
+        <Button data-test="{singular}-save-btn" :disabled="update{Singular}.isPending.value" @click="saveEdit">
           <Loader2 v-if="update{Singular}.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
           <Save v-else class="mr-2 h-4 w-4" />
           {{{{ update{Singular}.isPending.value ? 'Saving...' : 'Save' }}}}

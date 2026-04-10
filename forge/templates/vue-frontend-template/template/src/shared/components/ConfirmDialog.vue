@@ -43,8 +43,9 @@ const emit = defineEmits<{
         <AlertDialogDescription>{{ description }}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ cancelLabel }}</AlertDialogCancel>
+        <AlertDialogCancel data-test="confirm-dialog-cancel">{{ cancelLabel }}</AlertDialogCancel>
         <AlertDialogAction
+          data-test="confirm-dialog-confirm"
           :class="buttonVariants({ variant })"
           @click="emit('confirm')"
         >

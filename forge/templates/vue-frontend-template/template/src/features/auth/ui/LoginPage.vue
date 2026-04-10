@@ -60,7 +60,7 @@ function handleLogin() {
       </CardHeader>
 
       <CardContent class="p-8" style="padding-top: 24px">
-        <Button class="w-full" size="lg" :disabled="isLoading" @click="handleLogin">
+        <Button data-test="login-submit-btn" class="w-full" size="lg" :disabled="isLoading" @click="handleLogin">
           <template v-if="isLoading">
             <Loader2 class="mr-2 h-4 w-4 animate-spin" />
             Signing in...

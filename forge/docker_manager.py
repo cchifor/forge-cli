@@ -53,6 +53,7 @@ def render_compose(config: ProjectConfig, project_root: Path) -> Path:
     primary = config.backend
 
     context = {
+        "project_slug": config.project_slug,
         "backends": backends_ctx,
         "backend_language": primary.language.value if primary else "python",
         "backend_slug": config.backend_slug,
