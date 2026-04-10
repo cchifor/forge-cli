@@ -34,9 +34,12 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-function handleConfirm() {
-  emit('confirm')
+async function handleConfirm() {
   emit('update:open', false)
+  // Emit confirm after closing so the parent handler runs
+  // without interference from the Dialog's event handling
+  await new Promise(r => setTimeout(r, 0))
+  emit('confirm')
 }
 
 function handleCancel() {
