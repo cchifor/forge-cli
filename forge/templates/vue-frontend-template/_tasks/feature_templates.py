@@ -289,6 +289,7 @@ function confirmDelete({singular}: {{ id: string; name: string }}) {{
 
 async function handleDelete() {{
   if (!{singular}ToDelete.value) return
+  deleteDialogOpen.value = false
   try {{
     await delete{Singular}.mutateAsync({singular}ToDelete.value.id)
     toast.success(`{Singular} "${{{singular}ToDelete.value.name}}" deleted`)
@@ -557,6 +558,7 @@ function saveEdit() {{
 }}
 
 async function handleDelete() {{
+  deleteDialogOpen.value = false
   try {{
     await delete{Singular}.mutateAsync(props.{singular}Id)
     toast.success('{Singular} deleted')
