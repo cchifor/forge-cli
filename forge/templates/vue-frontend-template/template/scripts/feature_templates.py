@@ -469,13 +469,13 @@ function handleSubmit() {{
       </div>
     </div>
 
-    <Card class="max-w-2xl">
-      <CardHeader>
-        <CardTitle>{Singular} Details</CardTitle>
-        <CardDescription>Fill in the details</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form class="space-y-4" @submit.prevent="handleSubmit">
+    <form class="max-w-2xl" @submit.prevent="handleSubmit">
+      <Card>
+        <CardHeader>
+          <CardTitle>{Singular} Details</CardTitle>
+          <CardDescription>Fill in the details</CardDescription>
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div class="space-y-2">
             <Label for="name">Name *</Label>
             <Input id="name" v-model="name" placeholder="Enter name" required />
@@ -484,16 +484,16 @@ function handleSubmit() {{
             <Label for="description">Description</Label>
             <Textarea id="description" v-model="description" placeholder="Enter description" :rows="3" />
           </div>
-        </form>
-      </CardContent>
-      <CardFooter class="gap-2">
-        <Button variant="outline" @click="router.push('/{plural}')">Cancel</Button>
-        <Button type="submit" :disabled="create{Singular}.isPending.value">
-          <Loader2 v-if="create{Singular}.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
-          {{{{ create{Singular}.isPending.value ? 'Creating...' : 'Create {Singular}' }}}}
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardContent>
+        <CardFooter class="gap-2">
+          <Button type="button" variant="outline" @click="router.push('/{plural}')">Cancel</Button>
+          <Button type="submit" :disabled="create{Singular}.isPending.value">
+            <Loader2 v-if="create{Singular}.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
+            {{{{ create{Singular}.isPending.value ? 'Creating...' : 'Create {Singular}' }}}}
+          </Button>
+        </CardFooter>
+      </Card>
+    </form>
   </div>
 </template>
 """
