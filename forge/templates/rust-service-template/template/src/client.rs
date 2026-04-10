@@ -72,11 +72,11 @@ impl ServiceClient {
         );
         headers.insert(
             "x-gatekeeper-email",
-            tenant.email.parse().unwrap_or_default(),
+            tenant.email.parse().unwrap_or_else(|_| reqwest::header::HeaderValue::from_static("")),
         );
         headers.insert(
             "x-gatekeeper-roles",
-            tenant.roles.join(",").parse().unwrap_or_default(),
+            tenant.roles.join(",").parse().unwrap_or_else(|_| reqwest::header::HeaderValue::from_static("")),
         );
         headers.insert(
             "x-customer-id",

@@ -14,7 +14,7 @@ RUN mkdir src && mkdir -p src/bin && echo "fn main() {}" > src/main.rs && echo "
 
 # Copy real source and force rebuild (touch ensures sqlx::migrate! re-embeds migrations)
 COPY src ./src/
-RUN touch src/bin/migrate.rs && cargo build --release
+RUN touch src/main.rs src/bin/migrate.rs && cargo build --release
 
 # --- Runtime Stage ---
 FROM debian:bookworm-slim
