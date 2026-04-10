@@ -218,16 +218,17 @@ services:
 
 {% if has_frontend %}
   # ── E2E Tests (on-demand: docker compose --profile test run e2e) ──
+  # Runs on the host network so app.localhost resolves to 127.0.0.1
+  # where Traefik is listening — identical to real user experience.
   e2e:
     build:
       context: ./{{ project_slug }}-e2e
       dockerfile: Dockerfile
+    network_mode: host
     environment:
-      BASE_URL: "http://frontend:80"
+      BASE_URL: "http://app.localhost"
       CI: "true"
 {% if include_keycloak %}
-      KEYCLOAK_URL: "http://keycloak:8080"
-      KEYCLOAK_REALM: "{{ keycloak_realm }}"
       TEST_USER: "dev@localhost"
       TEST_PASSWORD: "devpass"
 {% endif %}
@@ -239,8 +240,6 @@ services:
 {% if include_keycloak %}
       - gatekeeper
 {% endif %}
-    networks:
-      - app-network
     profiles:
       - test
 {% endif %}
