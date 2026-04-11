@@ -242,7 +242,7 @@ def _build_config(args: argparse.Namespace, cfg: dict) -> ProjectConfig:
 
     # Keycloak
     include_keycloak = include_auth
-    keycloak_port = _get(args, "keycloak_port", cfg, "keycloak", "port", default=8080)
+    keycloak_port = _get(args, "keycloak_port", cfg, "keycloak", "port", default=18080)
     kc_realm = _get(
         args, "keycloak_realm", cfg, "keycloak", "realm",
         default="app",  # matches Host(`app.localhost`) for Gatekeeper tenant extraction
@@ -493,7 +493,7 @@ def _collect_inputs() -> ProjectConfig | None:
     if include_keycloak:
         print()
         print("  -- Keycloak --")
-        keycloak_port = _ask_port("Keycloak host port:", default="8080")
+        keycloak_port = _ask_port("Keycloak host port:", default="18080")
         kc_url = f"http://localhost:{keycloak_port}"
         kc_realm = _ask_text(
             "Keycloak realm:",

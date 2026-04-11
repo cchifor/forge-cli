@@ -127,7 +127,7 @@ class ProjectConfig:
     backends: list[BackendConfig] = field(default_factory=list)
     frontend: Optional[FrontendConfig] = None
     include_keycloak: bool = False
-    keycloak_port: int = 8080
+    keycloak_port: int = 18080
 
     # Backward compatibility: single backend access
     @property
