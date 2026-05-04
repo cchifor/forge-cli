@@ -24,3 +24,6 @@ pub mod models;
 pub mod routes;
 pub mod services;
 // FORGE:LIB_MOD_REGISTRATION
+// FORGE:BEGIN reliability_connection_pool:LIB_MOD_REGISTRATION
+pub mod db_pool;
+// FORGE:END reliability_connection_pool:LIB_MOD_REGISTRATION

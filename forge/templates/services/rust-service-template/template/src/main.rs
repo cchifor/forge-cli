@@ -17,7 +17,7 @@ use dotenvy::dotenv;
 use std::net::SocketAddr;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 mod app;
 mod client;
@@ -35,8 +35,7 @@ mod services;
 async fn main() {
     dotenv().ok();
 
-    let env_filter =
-        EnvFilter::from_default_env().add_directive("info".parse().unwrap());
+    let env_filter = EnvFilter::from_default_env().add_directive("info".parse().unwrap());
     let registry = tracing_subscriber::registry()
         .with(env_filter)
         .with(fmt::layer().json());
