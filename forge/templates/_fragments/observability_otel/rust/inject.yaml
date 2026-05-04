@@ -21,6 +21,6 @@
   position: before
   zone: generated
   snippet: |-
-    let service_name = std::env::var("OTEL_SERVICE_NAME")
-        .unwrap_or_else(|_| "forge-service".to_string());
+    let service_name =
+        std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "forge-service".to_string());
     let _ = otel::configure_otel(&service_name);
