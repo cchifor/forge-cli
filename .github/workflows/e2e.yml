@@ -55,11 +55,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Names map to ``test_<preset>_*`` in tests/e2e/test_full_generation.py
+        # (the workflow translates hyphens to underscores before passing
+        # to ``pytest -k``). Matrix display labels keep the friendlier
+        # hyphenated form.
         preset:
           - python-vue
           - node-svelte
-          - rust-none
-          - multi-backend-keycloak
+          - rust-no-frontend
+          - multi-backend-with-keycloak
     steps:
       - uses: actions/checkout@v4
 
