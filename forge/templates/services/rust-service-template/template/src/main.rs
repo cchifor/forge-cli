@@ -1,3 +1,10 @@
+// Generated scaffolding ships with infrastructure (config loaders, error
+// variants, service-client helpers) ready for user code that may not exist
+// yet. Silence the dead-code chorus crate-wide so ``cargo clippy -- -D
+// warnings`` doesn't trip on unused-but-intentional items; remove this
+// attribute once your service uses everything it generated.
+#![allow(dead_code)]
+
 use dotenvy::dotenv;
 use std::net::SocketAddr;
 use tracing_subscriber::layer::SubscriberExt;
@@ -7,6 +14,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 mod app;
 mod client;
 mod config;
+mod data;
 mod db;
 mod errors;
 mod middleware;

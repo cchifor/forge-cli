@@ -89,8 +89,8 @@
       "sha256": "84a5285ef7f1685f"
     },
     "services/api/src/client.rs": {
-      "size": 2759,
-      "sha256": "c42198aca42248f9"
+      "size": 2755,
+      "sha256": "d9f2149d51f372b5"
     },
     "services/api/src/config.rs": {
       "size": 6620,
@@ -113,20 +113,20 @@
       "sha256": "89db9354b981eab4"
     },
     "services/api/src/db_pool.rs": {
-      "size": 1202,
-      "sha256": "1650e653974e3e98"
+      "size": 1212,
+      "sha256": "b2de46e11cb7e822"
     },
     "services/api/src/errors.rs": {
       "size": 9440,
       "sha256": "f377a95f2d5379b8"
     },
     "services/api/src/lib.rs": {
-      "size": 330,
-      "sha256": "324f7c51d298ff7a"
+      "size": 707,
+      "sha256": "ab4d23c244631617"
     },
     "services/api/src/main.rs": {
-      "size": 1061,
-      "sha256": "4f8cf645bdd7864b"
+      "size": 1448,
+      "sha256": "96a4a9df99e06705"
     },
     "services/api/src/middleware/correlation.rs": {
       "size": 788,
@@ -193,8 +193,8 @@
       "sha256": "871df294f98b8030"
     },
     "services/api/tests/items_test.rs": {
-      "size": 4460,
-      "sha256": "9c4233a0c67ae0b4"
+      "size": 4452,
+      "sha256": "283d9959f8a3e228"
     },
     "services/api/tests/tenant_test.rs": {
       "size": 3909,

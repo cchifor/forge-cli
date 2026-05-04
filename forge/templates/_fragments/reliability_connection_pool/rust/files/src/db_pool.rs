@@ -2,7 +2,9 @@
 //!
 //! Usage from `db.rs`:
 //!
-//!     let pool = forge_db_pool::build_pool(&settings.database_url).await?;
+//! ```text
+//! let pool = db_pool::build_pool(&settings.database_url).await?;
+//! ```
 //!
 //! Defaults:
 //!   * max_connections = 20

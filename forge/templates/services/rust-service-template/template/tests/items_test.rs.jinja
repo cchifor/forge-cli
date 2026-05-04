@@ -24,7 +24,7 @@ fn mock_item() -> serde_json::Value {
 }
 
 fn build_mock_router() -> axum::Router {
-    use axum::routing::{get, post};
+    use axum::routing::get;
     use axum::Json;
 
     axum::Router::new()

@@ -23,11 +23,27 @@ from __future__ import annotations
 
 import json
 import re
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from forge.errors import GeneratorError
+
+
+def _wrap_docstring(desc: str, indent: str = "    ", line_length: int = 100) -> list[str]:
+    """Render ``desc`` as a single- or multi-line Python docstring.
+
+    Generated services run with ruff's ``E501`` rule (line-length 100) and
+    schema descriptions occasionally exceed that. Wrap long descriptions
+    rather than emitting one massive line.
+    """
+    overhead = len(indent) + 6  # indent + ``"""`` + ``"""`` = 6 chars
+    if len(desc) <= line_length - overhead:
+        return [f'{indent}"""{desc}"""']
+    wrapped = textwrap.wrap(desc, width=line_length - len(indent))
+    return [f'{indent}"""', *(f"{indent}{w}" for w in wrapped), f'{indent}"""']
+
 
 # -- Schema loading -----------------------------------------------------------
 
@@ -319,7 +335,7 @@ def _pydantic_for_schema(schema: Schema) -> str:
 
     lines: list[str] = [f"class {title}(BaseModel):"]
     if schema.description:
-        lines.append(f'    """{schema.description}"""')
+        lines.extend(_wrap_docstring(schema.description))
         lines.append("")
 
     # Model-wide config

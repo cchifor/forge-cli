@@ -33,7 +33,7 @@ impl ServiceClient {
         tenant: &TenantContext,
         correlation_id: Option<&str>,
     ) -> Result<Response, reqwest::Error> {
-        let mut req = self
+        let req = self
             .client
             .get(format!("{}{}", self.base_url, path))
             .headers(self.build_headers(tenant, correlation_id));

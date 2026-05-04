@@ -1,3 +1,10 @@
+// Generated scaffolding ships with infrastructure (config loaders, error
+// variants, service-client helpers) ready for user code that may not exist
+// yet. Silence the dead-code chorus crate-wide so ``cargo clippy -- -D
+// warnings`` doesn't trip on unused-but-intentional items; remove this
+// attribute once your service uses everything it generated.
+#![allow(dead_code)]
+
 pub mod app;
 pub mod client;
 pub mod config;
