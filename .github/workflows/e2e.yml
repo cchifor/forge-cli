@@ -103,7 +103,12 @@ jobs:
       - name: Run e2e suite (preset ${{ matrix.preset }})
         env:
           FORGE_E2E_PRESET: ${{ matrix.preset }}
-        run: uv run pytest -m e2e -v --no-cov -k "${{ matrix.preset }}"
+        # Test functions in tests/e2e/ use snake_case naming
+        # (``test_python_vue_*``) so translate matrix preset's hyphens
+        # to underscores before passing to ``pytest -k``.
+        run: |
+          PRESET="${{ matrix.preset }}"
+          uv run pytest -m e2e -v --no-cov -k "${PRESET//-/_}"
 
   e2e-canvas-packages:
     name: canvas packages build + typecheck
