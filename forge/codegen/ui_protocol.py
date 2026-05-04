@@ -189,9 +189,7 @@ def _dart_for_schema(schema: Schema) -> str:
         field_name = _to_camel_case(name)
 
         field_decls.append(f"  final {dart_type}{nullable_mark} {field_name};")
-        ctor_params.append(
-            f"    {'required ' if is_required else ''}this.{field_name},"
-        )
+        ctor_params.append(f"    {'required ' if is_required else ''}this.{field_name},")
 
         from_json_parts.append(
             f"      {field_name}: {_dart_from_json(prop_schema, name, is_required)},"
@@ -295,7 +293,7 @@ def emit_pydantic(schemas: list[Schema]) -> str:
     lines: list[str] = [
         '"""Generated from forge/templates/_shared/ui-protocol/*.schema.json.',
         "",
-        'Regenerate via ``python -m forge.codegen.ui_protocol``.',
+        "Regenerate via ``python -m forge.codegen.ui_protocol``.",
         '"""',
         "",
         "from __future__ import annotations",

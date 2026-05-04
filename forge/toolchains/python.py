@@ -44,9 +44,7 @@ class PythonToolchain:
             run_backend_cmd(
                 backend_dir, ["uv", "run", "ty", "check", "src/"], "Type check", quiet=quiet
             ),
-            run_backend_cmd(
-                backend_dir, ["uv", "run", "pytest", "-v"], "Tests", quiet=quiet
-            ),
+            run_backend_cmd(backend_dir, ["uv", "run", "pytest", "-v"], "Tests", quiet=quiet),
         ]
         return checks
 

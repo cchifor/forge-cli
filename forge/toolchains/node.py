@@ -34,9 +34,7 @@ class NodeToolchain:
             run_backend_cmd(
                 backend_dir, ["npx", "biome", "check", "src/"], "Lint check", quiet=quiet
             ),
-            run_backend_cmd(
-                backend_dir, ["npx", "tsc", "--noEmit"], "Type check", quiet=quiet
-            ),
+            run_backend_cmd(backend_dir, ["npx", "tsc", "--noEmit"], "Type check", quiet=quiet),
             run_backend_cmd(backend_dir, ["npx", "vitest", "run"], "Tests", quiet=quiet),
         ]
 
