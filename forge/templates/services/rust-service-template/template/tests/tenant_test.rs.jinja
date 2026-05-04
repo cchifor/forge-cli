@@ -6,6 +6,11 @@ use http_body_util::BodyExt;
 use tower::ServiceExt;
 
 /// Helper handler that extracts TenantContext and returns it as JSON.
+/// ``#[rustfmt::skip]`` here because the project_slug substitution makes
+/// the signature length non-deterministic — short slugs fit on a single
+/// line, longer ones overflow ``line_length=100`` and rustfmt wraps to
+/// multi-line. Skipping keeps the template stable across slug widths.
+#[rustfmt::skip]
 async fn echo_tenant(tenant: {{ project_name | replace("-", "_") }}::middleware::tenant::TenantContext) -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "user_id": tenant.user_id.to_string(),
